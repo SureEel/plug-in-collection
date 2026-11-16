@@ -1,0 +1,54 @@
+{
+  "kit": "mpc-red",
+  "pages": [
+    {
+      "name": "MASTER",
+      "controls": [
+        { "param": "Mode", "widget": "switch" },
+        { "param": "Target", "widget": "slider", "overlay": "menu" },
+        { "param": "Custom LUFS", "widget": "knob", "visibleWhen": { "param": "Target", "choice": "Custom" } },
+        { "param": "Ceiling", "widget": "knob" },
+
+        { "param": "Gain", "widget": "slider" },
+        { "param": "Predicted", "widget": "slider" },
+        { "param": "GR", "widget": "slider" },
+        { "param": "GR Max", "widget": "slider" },
+
+        { "param": "Out Mom LUFS", "widget": "slider" },
+        { "param": "Out ST LUFS", "widget": "slider" },
+        { "param": "Out Int LUFS", "widget": "slider" },
+        { "param": "Out Avg LUFS", "widget": "slider" },
+
+        { "param": "Reset", "widget": "switch" },
+        { "param": "Refresh", "widget": "switch" },
+        { "param": "Out TP Max", "widget": "slider" },
+        { "param": "In Int LUFS", "widget": "slider" }
+      ]
+    },
+    {
+      "name": "METERS",
+      "controls": [
+        { "param": "In Mom LUFS", "widget": "slider" },
+        { "param": "In ST LUFS", "widget": "slider" },
+        { "param": "In Int LUFS", "widget": "slider" },
+        { "param": "In Avg LUFS", "widget": "slider" },
+
+        { "param": "Out Mom LUFS", "widget": "slider" },
+        { "param": "Out ST LUFS", "widget": "slider" },
+        { "param": "Out Int LUFS", "widget": "slider" },
+        { "param": "Out Avg LUFS", "widget": "slider" },
+
+        { "param": "In TP Max", "widget": "slider" },
+        { "param": "Out TP Max", "widget": "slider" },
+        { "param": "GR", "widget": "slider" },
+        { "param": "GR Max", "widget": "slider" },
+
+        { "param": "Reset", "widget": "switch" },
+        { "param": "Refresh", "widget": "switch" },
+        "empty",
+        "empty"
+      ]
+    }
+  ],
+  "style": { "background": "ff1e1d1e", "text": "ffffffff", "muted": "ff6a6a6c" }
+}

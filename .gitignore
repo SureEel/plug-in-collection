@@ -1,0 +1,21 @@
+# Build outputs (per plugin project)
+build/
+dist/
+
+# Locally installed toolchain helpers (zig venv, host_sim binary) - downloaded by tools/build.py
+.sdk-tools/
+
+# EBU loudness test set (download it yourself, see plugins/LUFS Master/tests/EBU_RESULTS.md)
+plugins/LUFS Master/tests/ebu/
+
+# Sleepy Android user presets written while testing on a desktop
+user-presets.bin
+*.bin.tmp
+
+# Python
+__pycache__/
+*.pyc
+
+# OS cruft
+.DS_Store
+Thumbs.db
