@@ -1,0 +1,331 @@
+{
+  "kit": "mono",
+  "pages": [
+    {
+      "name": "MAIN",
+      "controls": [
+        {
+          "param": "Input Gain",
+          "widget": "knob"
+        },
+        {
+          "param": "Routing",
+          "widget": "switch"
+        },
+        {
+          "param": "Assign",
+          "widget": "switch"
+        },
+        {
+          "param": "Save",
+          "widget": "switch"
+        },
+        {
+          "param": "Output",
+          "widget": "knob"
+        },
+        {
+          "param": "Pedal",
+          "widget": "knob"
+        },
+        {
+          "param": "Set Heel",
+          "widget": "switch"
+        },
+        {
+          "param": "Name Pos",
+          "widget": "knob"
+        },
+        {
+          "param": "Mix",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Set Toe",
+          "widget": "switch"
+        },
+        {
+          "param": "Letter",
+          "widget": "knob"
+        },
+        {
+          "param": "Bypass",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Clear",
+          "widget": "switch"
+        },
+        {
+          "param": "Confirm",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "FILTER",
+      "controls": [
+        {
+          "param": "Sensitivity",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "Cutoff",
+          "widget": "knob"
+        },
+        {
+          "param": "VCA",
+          "widget": "switch"
+        },
+        {
+          "param": "Attack",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO Depth",
+          "widget": "knob"
+        },
+        {
+          "param": "Sweep",
+          "widget": "knob"
+        },
+        {
+          "param": "Filter Mix",
+          "widget": "knob"
+        },
+        {
+          "param": "Release",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO Shape",
+          "widget": "switch"
+        },
+        {
+          "param": "Resonance",
+          "widget": "knob"
+        },
+        {
+          "param": "Stereo",
+          "widget": "switch"
+        },
+        {
+          "param": "Env Mode",
+          "widget": "switch"
+        },
+        {
+          "param": "LFO To",
+          "widget": "switch"
+        },
+        {
+          "param": "Filter Type",
+          "widget": "switch"
+        },
+        {
+          "param": "Filter On",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "SWEEP",
+      "controls": [
+        {
+          "param": "Auto Sweep",
+          "widget": "switch"
+        },
+        {
+          "param": "Sweep Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "Env Touch",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Sweep Dir",
+          "widget": "switch"
+        },
+        {
+          "param": "Sweep Rate Max",
+          "widget": "knob"
+        },
+        {
+          "param": "Env Touch Amt",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Sweep Range",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Sweep Touch",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "Sweep Touch Amt",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "STUTTER",
+      "controls": [
+        {
+          "param": "Stutter On",
+          "widget": "switch"
+        },
+        {
+          "param": "Stut Mode",
+          "widget": "switch"
+        },
+        {
+          "param": "Slice",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Trigger",
+          "widget": "switch"
+        },
+        {
+          "param": "Sync",
+          "widget": "switch"
+        },
+        {
+          "param": "Loop",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Hold",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Feedback",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Dry Mute",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Stutter Mix",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "RANDOM",
+      "controls": [
+        {
+          "param": "Slice Min",
+          "widget": "knob"
+        },
+        {
+          "param": "Rand Width",
+          "widget": "knob"
+        },
+        {
+          "param": "Stut Touch",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Slice Max",
+          "widget": "knob"
+        },
+        {
+          "param": "Rand Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "Stut Touch Amt",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Loop Min",
+          "widget": "knob"
+        },
+        {
+          "param": "Rand Rate Max",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Loop Max",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "PATCH",
+      "controls": [
+        {
+          "param": "Randomize",
+          "widget": "switch"
+        },
+        {
+          "param": "Lock Filter",
+          "widget": "switch"
+        },
+        {
+          "param": "Save",
+          "widget": "switch"
+        },
+        {
+          "param": "Name Pos",
+          "widget": "knob"
+        },
+        {
+          "param": "Undo",
+          "widget": "switch"
+        },
+        {
+          "param": "Lock Stutter",
+          "widget": "switch"
+        },
+        {
+          "param": "Confirm",
+          "widget": "switch"
+        },
+        {
+          "param": "Letter",
+          "widget": "knob"
+        },
+        {
+          "param": "Rand Amount",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Cancel",
+          "widget": "switch"
+        }
+      ]
+    }
+  ],
+  "style": {
+    "background": "ff000000",
+    "text": "ffffffff",
+    "muted": "ff9a9a9a",
+    "accent": "ffffffff"
+  }
+}

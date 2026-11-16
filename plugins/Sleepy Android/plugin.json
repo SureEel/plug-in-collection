@@ -1,0 +1,17 @@
+{
+  "name": "Sleepy Android",
+  "manufacturer": "sureeel",
+  "version": "1.0.0",
+  "format": "vst2",
+  "kind": "effect",
+  "uid": "SP1o",
+  "numInputs": 2,
+  "numOutputs": 2,
+  "category": "Effect",
+  "file32": "VST/sleepy-android-arm32.so",
+  "file64": "VST/sleepy-android-arm64.so",
+  "description": "Guitar envelope filter modelled on the Mutronics Mutator plus a random capture-and-loop stutter, with touch-sensitive sweeps, patch randomizer, pedal morph and user presets.",
+  "author": "Sure Eel",
+  "url": "https://github.com/SureEel/plug-in-collection",
+  "license": "MIT"
+}
