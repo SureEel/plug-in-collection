@@ -29,7 +29,7 @@ and every meter as a number.*
 ### Install
 
 1. Download the zip for your hardware from the
-   [latest release](https://github.com/SureEel/plug-in-collection/releases/latest):
+   [LUFS Master release](https://github.com/SureEel/plug-in-collection/releases/tag/lufs-master-v1.0.0):
    - **`...-force-armv7.zip`**: 32-bit hardware, including the **Akai Force**.
    - **`...-mpc-aarch64.zip`**: 64-bit hardware, including the **MPC Key 37 Gen 2**.
 
@@ -83,7 +83,7 @@ with naming, and a -1 dBFS safety limiter are built in.
 
 Same as LUFS Master: download **`sleepy-android-...-force-armv7.zip`** (32-bit, Akai Force) or
 **`sleepy-android-...-mpc-aarch64.zip`** (64-bit, MPC Key 37 Gen 2) from the
-[releases](https://github.com/SureEel/plug-in-collection/releases), copy the folder
+[Sleepy Android release](https://github.com/SureEel/plug-in-collection/releases/tag/sleepy-android-v1.0.0), copy the folder
 **`sureeel - VST - Sleepy Android`** into **`VST2 Plugins`**, enable the two Enhancements switches
 (MPC OS / Force OS 3.10.1+) and restart. Insert it on a guitar track or input.
 
