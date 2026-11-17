@@ -1,0 +1,713 @@
+{
+  "kit": "mono",
+  "pages": [
+    {
+      "name": "MAIN",
+      "controls": [
+        {
+          "param": "Blend",
+          "widget": "knob"
+        },
+        {
+          "param": "A Cutoff",
+          "widget": "knob"
+        },
+        {
+          "param": "Category",
+          "widget": "knob"
+        },
+        {
+          "param": "Undo",
+          "widget": "switch"
+        },
+        {
+          "param": "Pad Y",
+          "widget": "knob"
+        },
+        {
+          "param": "A Reso",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Rand Amount",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "B Cutoff",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Pad Y To",
+          "widget": "switch"
+        },
+        {
+          "param": "B Reso",
+          "widget": "knob"
+        },
+        {
+          "param": "Randomize",
+          "widget": "switch"
+        },
+        {
+          "param": "Volume",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "OSC A",
+      "controls": [
+        {
+          "param": "A1 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "A Unison",
+          "widget": "knob"
+        },
+        {
+          "param": "A1 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "A Detune",
+          "widget": "knob"
+        },
+        {
+          "param": "A1 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "A Spread",
+          "widget": "knob"
+        },
+        {
+          "param": "A1 Semi",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 Semi",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 Semi",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "SHAPE A",
+      "controls": [
+        {
+          "param": "A Start From",
+          "widget": "knob"
+        },
+        {
+          "param": "A Bright",
+          "widget": "knob"
+        },
+        {
+          "param": "A Fold",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "A Draw Mix",
+          "widget": "knob"
+        },
+        {
+          "param": "A Odd/Even",
+          "widget": "knob"
+        },
+        {
+          "param": "A Bend",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "A Mutate",
+          "widget": "knob"
+        },
+        {
+          "param": "A Formant",
+          "widget": "knob"
+        },
+        {
+          "param": "A Sync",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "A Seed",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "DRAW A",
+      "controls": [
+        {
+          "param": "A Draw X",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "A Smooth",
+          "widget": "switch"
+        },
+        {
+          "param": "A Draw Y",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "A Copy Start",
+          "widget": "switch"
+        },
+        {
+          "param": "A Draw Mix",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "A Clear Draw",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "A Undo Draw",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "OSC B",
+      "controls": [
+        {
+          "param": "B1 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 Wave",
+          "widget": "knob"
+        },
+        {
+          "param": "B Unison",
+          "widget": "knob"
+        },
+        {
+          "param": "B1 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 Level",
+          "widget": "knob"
+        },
+        {
+          "param": "B Detune",
+          "widget": "knob"
+        },
+        {
+          "param": "B1 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 Octave",
+          "widget": "knob"
+        },
+        {
+          "param": "B Spread",
+          "widget": "knob"
+        },
+        {
+          "param": "B1 Semi",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 Semi",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 Semi",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "SHAPE B",
+      "controls": [
+        {
+          "param": "B Start From",
+          "widget": "knob"
+        },
+        {
+          "param": "B Bright",
+          "widget": "knob"
+        },
+        {
+          "param": "B Fold",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "B Draw Mix",
+          "widget": "knob"
+        },
+        {
+          "param": "B Odd/Even",
+          "widget": "knob"
+        },
+        {
+          "param": "B Bend",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "B Mutate",
+          "widget": "knob"
+        },
+        {
+          "param": "B Formant",
+          "widget": "knob"
+        },
+        {
+          "param": "B Sync",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "B Seed",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "DRAW B",
+      "controls": [
+        {
+          "param": "B Draw X",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "B Smooth",
+          "widget": "switch"
+        },
+        {
+          "param": "B Draw Y",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "B Copy Start",
+          "widget": "switch"
+        },
+        {
+          "param": "B Draw Mix",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "B Clear Draw",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "B Undo Draw",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "TUNE",
+      "controls": [
+        {
+          "param": "A1 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "A1 PW",
+          "widget": "knob"
+        },
+        {
+          "param": "B1 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "B1 PW",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "A2 PW",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "B2 PW",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "A3 PW",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 Fine",
+          "widget": "knob"
+        },
+        {
+          "param": "B3 PW",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "FILTER",
+      "controls": [
+        {
+          "param": "A Filter",
+          "widget": "knob"
+        },
+        {
+          "param": "B Filter",
+          "widget": "knob"
+        },
+        {
+          "param": "A Key Trk",
+          "widget": "knob"
+        },
+        {
+          "param": "Blend",
+          "widget": "knob"
+        },
+        {
+          "param": "A Cutoff",
+          "widget": "knob"
+        },
+        {
+          "param": "B Cutoff",
+          "widget": "knob"
+        },
+        {
+          "param": "B Key Trk",
+          "widget": "knob"
+        },
+        {
+          "param": "Pad Y",
+          "widget": "knob"
+        },
+        {
+          "param": "A Reso",
+          "widget": "knob"
+        },
+        {
+          "param": "B Reso",
+          "widget": "knob"
+        },
+        {
+          "param": "Routing",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "A Env Amt",
+          "widget": "knob"
+        },
+        {
+          "param": "B Env Amt",
+          "widget": "knob"
+        },
+        {
+          "param": "Pad Y To",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "ENV",
+      "controls": [
+        {
+          "param": "A Attack",
+          "widget": "knob"
+        },
+        {
+          "param": "A F.Attack",
+          "widget": "knob"
+        },
+        {
+          "param": "B Attack",
+          "widget": "knob"
+        },
+        {
+          "param": "B F.Attack",
+          "widget": "knob"
+        },
+        {
+          "param": "A Decay",
+          "widget": "knob"
+        },
+        {
+          "param": "A F.Decay",
+          "widget": "knob"
+        },
+        {
+          "param": "B Decay",
+          "widget": "knob"
+        },
+        {
+          "param": "B F.Decay",
+          "widget": "knob"
+        },
+        {
+          "param": "A Sustain",
+          "widget": "knob"
+        },
+        {
+          "param": "A F.Sustain",
+          "widget": "knob"
+        },
+        {
+          "param": "B Sustain",
+          "widget": "knob"
+        },
+        {
+          "param": "B F.Sustain",
+          "widget": "knob"
+        },
+        {
+          "param": "A Release",
+          "widget": "knob"
+        },
+        {
+          "param": "A F.Release",
+          "widget": "knob"
+        },
+        {
+          "param": "B Release",
+          "widget": "knob"
+        },
+        {
+          "param": "B F.Release",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "MOD",
+      "controls": [
+        {
+          "param": "LFO1 Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO2 Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "Drift",
+          "widget": "knob"
+        },
+        {
+          "param": "Volume",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO1 Depth",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO2 Depth",
+          "widget": "knob"
+        },
+        {
+          "param": "Drive",
+          "widget": "knob"
+        },
+        {
+          "param": "Output",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO1 Shape",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO2 Shape",
+          "widget": "knob"
+        },
+        {
+          "param": "Grit",
+          "widget": "knob"
+        },
+        {
+          "param": "Voices",
+          "widget": "knob"
+        },
+        {
+          "param": "LFO1 To",
+          "widget": "switch"
+        },
+        {
+          "param": "LFO2 To",
+          "widget": "switch"
+        },
+        {
+          "param": "Ring",
+          "widget": "knob"
+        },
+        {
+          "param": "Skin",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "PRESET",
+      "controls": [
+        {
+          "param": "Browse",
+          "widget": "knob"
+        },
+        {
+          "param": "Preset",
+          "widget": "knob"
+        },
+        {
+          "param": "Rand Amount",
+          "widget": "knob"
+        },
+        {
+          "param": "Lock A",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Undo",
+          "widget": "switch"
+        },
+        {
+          "param": "Lock B",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Lock Mod",
+          "widget": "switch"
+        },
+        {
+          "param": "Lock Filter",
+          "widget": "switch"
+        },
+        {
+          "param": "Load",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Lock Skin",
+          "widget": "switch"
+        },
+        {
+          "param": "Lock Env",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "SAVE",
+      "controls": [
+        "empty",
+        "empty",
+        {
+          "param": "Save",
+          "widget": "switch"
+        },
+        {
+          "param": "Save In",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Confirm",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "Cancel",
+          "widget": "switch"
+        }
+      ]
+    }
+  ],
+  "style": {
+    "background": "ff1a2a33",
+    "text": "ffe6e9ec",
+    "muted": "ff9aa3ad",
+    "accent": "ffe6e9ec"
+  }
+}

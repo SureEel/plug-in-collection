@@ -1,35 +1,87 @@
 # plug-in-collection
 
-A collection of vibe-coded effects that I wanted and thought someone else might too, for
-**Akai MPC** and **Akai Force** standalone hardware. By Sure Eel (shown on the device as
+A collection of vibe-coded instruments and effects that I wanted and thought someone else might too,
+for **Akai MPC** and **Akai Force** standalone hardware. By Sure Eel (shown on the device as
 manufacturer **sureeel**).
 
 | Plugin | What it is |
 |---|---|
-| [LUFS Master](#lufs-master) | Loudness meter, leveler and transparent true-peak limiter |
+| [Elver](#elver) | Two-sided synthesizer with a wave shaper you draw with your finger, an XY pad and a mood randomizer |
+| [LUFS Master](#lufs-master) | Loudness meter, leveler and true-peak limiter: measure a pass, auto-set the gain, land on target |
 | [Sleepy Android](#sleepy-android) | Guitar envelope filter (after the Mutronics Mutator) plus a random capture-and-loop stutter |
 
 More plugins are on the way.
 
 ---
 
+## Elver
+
+A clean, simple, low-memory synthesizer. It has two sides, **A** and **B**. Each has three oscillators
+(with unison), its own filter (24 dB LP, 12 dB LP, band-pass, high-pass, notch) and its own amp and
+filter envelopes. An **XY pad** blends A into B and sweeps cutoff, morph, resonance or drive. Two LFOs,
+slow drift, drive, bit-crush grit and ring modulation round it out.
+
+**Shape and drawing:** each side has a Shaper.
+- Start from one of 60 original library waves (analog, vowels, FM bells, organs, digital, harmonic,
+  noise), or **draw your own wave with your finger** on the DRAW page.
+- Then sculpt it with Bright, Odd/Even, Formant, Fold, Bend, Sync and a seeded Mutate.
+- The wave is band-limited, so high notes don't alias, and changes crossfade without clicks.
+
+**Randomize** builds a new sound in one of seven moods, from calmest to noisiest: Ambient, Pads & Winds,
+Keys & Plucks, Leads & Basses, Lo-Fi Psych, Industrial, Noise & Chaos. It has an amount control, Undo
+and section locks. Presets are organised by the same seven categories (4 factory and 8 user slots each).
+You name a preset on an on-screen letter grid.
+
+There are four panel skins: Neon Rain, Capsule Red, Monolith and Derelict. Elver shows its own CPU load
+and the voices playing.
+
+![Elver MAIN page](docs/images/elver-main.png)
+
+![Elver DRAW page](docs/images/elver-draw.png)
+
+*The MAIN page and a DRAW page with a hand-drawn wave, rendered from the plugin's own skin files with
+real values (fonts are approximate). 13 pages in all: MAIN, OSC, SHAPE and DRAW for each side, TUNE,
+FILTER, ENV, MOD, PRESET and SAVE.*
+
+### Install
+
+Download **`elver-...-force-armv7.zip`** (32-bit, Akai Force) or **`elver-...-mpc-aarch64.zip`** (64-bit,
+MPC Key 37 Gen 2) from the [Elver release](https://github.com/SureEel/plug-in-collection/releases/tag/elver-v1.1.0).
+Copy the folder **`sureeel - VST - Elver`** into **`VST2 Plugins`**, switch on the two Enhancements
+settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load it on a plugin track.
+
+### Use
+
+- **MAIN:** drag the XY pad (X = A↔B blend, Y = what **Pad Y To** selects). Pick a **Category** and tap
+  **Randomize**; **Undo** goes back.
+- **OSC A / OSC B:** wave, level, octave and semitone for each oscillator, plus unison.
+- **SHAPE A / SHAPE B:** set an oscillator's wave to **shape** to hear the Shaper. Start From picks the
+  library wave; the scope shows the cycle.
+- **DRAW A / DRAW B:** paint the wave on the pad. **Draw Mix** blends it with the start wave.
+  **Copy Start**, **Clear** and **Undo** are the editing tools.
+- **PRESET / SAVE:** browse by category and Load. To save, type a name, choose a category, then Confirm.
+- Volume, Output and the skin are global: loading a preset never changes your levels.
+
+Touch any control's name to see what it does. Details: [plugins/Elver/README.md](plugins/Elver/README.md).
+
+---
+
 ## LUFS Master
 
-A loudness meter, live leveler and transparent true-peak limiter for mastering to streaming or
-broadcast loudness targets (ITU-R BS.1770 / EBU R128). Measure a song once, lock the gain, and
-bounce it at the target loudness, with true peaks held under the ceiling and no colouring of
-the sound.
+A loudness meter, leveler and true-peak limiter (ITU-R BS.1770 / EBU R128) for mastering and live
+broadcast. Measure a pass; when the transport stops, LUFS Master sets the gain for you, and the next
+pass lands on your loudness target. True peaks never go above the ceiling.
 
 ![LUFS Master touch panel](docs/images/lufs-master-panel.png)
 
 *The MASTER page, rendered from the plugin's own skin files with real readouts captured while it
-measured a test signal (fonts are approximate). A second page, METERS, shows loudness over time
-and every meter as a number.*
+measured a test signal (fonts are approximate). A second page, METERS, shows output loudness over time
+against the target, and every meter as a number.*
 
 ### Install
 
 1. Download the zip for your hardware from the
-   [LUFS Master release](https://github.com/SureEel/plug-in-collection/releases/tag/lufs-master-v1.0.0):
+   [LUFS Master release](https://github.com/SureEel/plug-in-collection/releases/tag/lufs-master-v1.1.0):
    - **`...-force-armv7.zip`**: 32-bit hardware, including the **Akai Force**.
    - **`...-mpc-aarch64.zip`**: 64-bit hardware, including the **MPC Key 37 Gen 2**.
 
@@ -41,31 +93,40 @@ and every meter as a number.*
 3. On the device: **Preferences → Enhancements (Beta)**, switch on **Enable Enhancements** and
    **External Plugin Support**. Needs **MPC OS / Force OS 3.10.1 or later**.
 4. Restart the device. Insert **LUFS Master** (manufacturer **sureeel**) as an insert effect,
-   last on the track or master you want to deliver.
+   last on the track or master you want to deliver. To bypass it, switch the plugin off.
 
 ### Use
 
-1. Pick a **Target**: -14 LUFS (streaming), -16 (Apple Music / podcasts), -23 (EBU R128),
-   -24 (ATSC A/85) or Custom. Leave **Ceiling** at -1.0 dBTP unless you need another.
-2. Set **Mode** to **Measure** and play the whole song once. A slow leveler rides the gain so
-   you already hear it near the target.
-3. Set **Mode** to **Locked**. The plugin calculates one fixed gain and shows the **Predicted**
-   output loudness.
-4. Press **Refresh**, then bounce. **Output integrated loudness** should read the target at the end.
+1. Pick a **Target** and a **Ceiling**:
+   - **Target:** -14 LUFS (streaming), -16 (Apple Music / podcasts), -23 (EBU R128), -24 (ATSC A/85)
+     or Custom.
+   - **Ceiling:** a true peak, default -1.0 dBTP.
+2. Choose **Measure** with **Live Speed Off**, and play the song once. The **Suggested Gain** shows what
+   would put it on target.
+3. Stop the transport. **Auto-set** writes the gain into **Input Gain**, switches to **Manual** and shows
+   **APPLIED**. Play or record again: **Output Integrated** lands on the target. **Clear** or **Undo**
+   take the auto-set back.
+4. **Live:** choose Measure with Live Speed **Fast** (live broadcast) or **Slow** (mastering), and the
+   gain follows the material automatically, smoothly, within ±**Max Change**.
 
 | Control | What it does |
 |---|---|
-| Mode | **Bypass** (bit-exact), **Measure** (meters and leveler), **Locked** (fixed gain; the limiter only catches peaks) |
+| Mode | **Manual** (your Input Gain) or **Measure** (listen, suggest, and with Fast / Slow adjust) |
+| Live Speed | **Fast** (live broadcast) / **Off** (measure only) / **Slow** (mastering) |
+| Input Gain | Gain in dB, used in Manual; auto-set writes it when a pass stops |
+| Max Change | The most Fast / Slow may move the gain, ±1 to 24 dB |
 | Target / Custom LUFS | The loudness to reach; Custom allows -30 to -6 LUFS |
-| Ceiling | True-peak ceiling of the limiter, -3 to 0 dBTP |
-| Reset | Clears the measurement, the lock and all readouts |
-| Refresh | Clears the readouts only; keeps the measurement and the lock |
+| Ceiling | True-peak ceiling, -12 to 0 dBTP (8× oversampled look-ahead limiter, 160 samples latency) |
+| Input level | Raw input peak in dBFS, before any gain, with a 2 s peak hold |
+| Output integrated / LUFS over time | This pass at the output, and the last 3 s, both against the target |
+| Gain change | The gain applied now; the limiter's reduction is shown below it |
+| Clear / Undo | Input Gain to 0 dB / back to before the auto-set |
+| Reset / Refresh | Start a new pass / clear the max readouts |
 
 Touch any meter or label to see an explanation in the help window. Details, measured accuracy
 and the test method are in [plugins/LUFS Master/README.md](plugins/LUFS%20Master/README.md).
 
 ---
-
 ## Sleepy Android
 
 A guitar effect in two parts: **Android**, an envelope filter modelled on the Mutronics Mutator
@@ -83,7 +144,7 @@ with naming, and a -1 dBFS safety limiter are built in.
 
 Same as LUFS Master: download **`sleepy-android-...-force-armv7.zip`** (32-bit, Akai Force) or
 **`sleepy-android-...-mpc-aarch64.zip`** (64-bit, MPC Key 37 Gen 2) from the
-[Sleepy Android release](https://github.com/SureEel/plug-in-collection/releases/tag/sleepy-android-v1.0.0), copy the folder
+[Sleepy Android release](https://github.com/SureEel/plug-in-collection/releases/tag/sleepy-android-v1.0.1), copy the folder
 **`sureeel - VST - Sleepy Android`** into **`VST2 Plugins`**, enable the two Enhancements switches
 (MPC OS / Force OS 3.10.1+) and restart. Insert it on a guitar track or input.
 
@@ -119,6 +180,7 @@ Python 3 (Windows, macOS or Linux); the first build downloads a compiler into `.
 ```
 python tools/build.py "plugins/LUFS Master"
 python tools/build.py "plugins/Sleepy Android"
+python tools/build.py "plugins/Elver"
 ```
 
 The finished plugin folders appear in `plugins/<name>/build/`. The touch panels are generated
@@ -130,10 +192,19 @@ SDK itself.
 
 - The plugins (everything in `plugins/`) are MIT-licensed, © 2026 Sure Eel: see [LICENSE](LICENSE).
 - The MPC Plugin Builder SDK (everything else) is MIT-licensed, © 2026 inMusic Brands, Inc.: see
-  [LICENSE-SDK](LICENSE-SDK). One small addition to it, an optional `programLoaded()` hook in
-  `framework/mpc_plugin.h`, lets Sleepy Android's presets set its newer controls; it does nothing
-  for other plugins.
-- The **Sure Eel logo** and the artwork made from it (Sleepy Android's `skin_src/reference/`,
-  `skin_src/assets/bg_logo.png`, `skin_src/assets/logo_96.png` and the page backgrounds generated
-  from them) are **not** covered by the MIT licence: all rights reserved.
-- Sleepy Android's button labels are rendered with the Bahnschrift font that ships with Windows.
+  [LICENSE-SDK](LICENSE-SDK). Additions in `framework/mpc_plugin.h`:
+  - optional preset hooks (`programLoaded`, `programSetsParam`);
+  - a project-restore fix that keeps the selected preset;
+  - guards against NaN or infinite samples and parameter values;
+  - a silence watchdog.
+
+  They change nothing for plugins that don't use them. `tools/restore_test.cpp` and
+  `tools/hostile_test.cpp` are added desktop test tools.
+- The **Sure Eel logo** and the artwork made from it are **not** covered by the MIT licence: all
+  rights reserved. That covers:
+  - Sleepy Android's `skin_src/reference/`, `skin_src/assets/bg_logo.png` and
+    `skin_src/assets/logo_96.png`;
+  - Elver's `skin_src/reference/`;
+  - the page backgrounds generated from them, including Elver's `skins/elver_panel.png`.
+- Sleepy Android's and Elver's button labels are rendered with the Bahnschrift font that ships with
+  Windows.

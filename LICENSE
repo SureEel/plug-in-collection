@@ -21,4 +21,5 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 Exception: the Sure Eel logo and the artwork made from it (plugins/Sleepy Android/skin_src/reference/,
 skin_src/assets/bg_logo.png, skin_src/assets/logo_96.png, and the page backgrounds generated from them
-into plugins/Sleepy Android/skins/) are not covered by this licence. All rights reserved.
+into plugins/Sleepy Android/skins/; plugins/Elver/skin_src/reference/ and the panel generated from it,
+plugins/Elver/skins/elver_panel.png) are not covered by this licence. All rights reserved.

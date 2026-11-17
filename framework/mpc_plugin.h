@@ -355,6 +355,12 @@ public:
     // plugin set parameters that are not part of the program table (e.g. ones added in a later
     // version, which sit after display or button parameters).
     virtual void programLoaded(int index) { (void)index; }
+    // Optional: return false for parameters a program must never change (e.g. input / output
+    // level that should only move when the user moves them).
+    virtual bool programSetsParam(int index) const { (void)index; return true; }
+    // Optional: true while the plugin is silent ON PURPOSE (a closed noise gate, a muted section...),
+    // so the silence watchdog leaves it alone. Called on the audio thread once per block.
+    virtual bool silenceIsExpected() const { return false; }
     // Optional: extra state beyond parameters (sequencer patterns, sample data...).
     virtual void saveExtraState(std::vector<uint8_t>& out) { (void)out; }
     virtual void loadExtraState(const uint8_t* data, size_t size) { (void)data; (void)size; }
@@ -383,7 +389,7 @@ public:
     int   getInt(int i) const { return (int)std::lround(get(i)); }
     void  setNormalised(int i, float norm)
     {
-        if (i < 0 || i >= numParams()) return;
+        if (i < 0 || i >= numParams() || !std::isfinite(norm)) return;   // a NaN / inf from a host or a damaged file is refused
         norm = clamp(norm, 0.0f, 1.0f);
         values_[(size_t)i]->store(norm, std::memory_order_relaxed);
         parameterChanged(i, params_[(size_t)i].toPlain(norm));
@@ -414,8 +420,9 @@ public:
     AEffect* effect_ = nullptr;
     audioMasterCallback host_ = nullptr;
 
-    void internalSetSampleRate(double sr) { sampleRate_ = sr; prepared_ = false; }
-    void internalSetBlockSize(int bs) { blockSize_ = bs; prepared_ = false; }
+    // Nonsense values (0, negative, absurd) are ignored: the plugin keeps its last good setting.
+    void internalSetSampleRate(double sr) { if (!(sr >= 8000.0 && sr <= 768000.0)) return; sampleRate_ = sr; prepared_ = false; }
+    void internalSetBlockSize(int bs) { if (bs < 1 || bs > 65536) return; blockSize_ = bs; prepared_ = false; }
     void internalResume()
     {
         if (!prepared_) { prepare(sampleRate_, blockSize_); prepared_ = true; }
@@ -451,6 +458,25 @@ public:
         // lazy prepare only runs if a host changes the sample rate without suspending first.
         if (!prepared_) { prepare(sampleRate_, blockSize_ > 0 ? blockSize_ : numFrames); prepared_ = true; }
         if (stateLoadPending_.exchange(false, std::memory_order_acq_rel)) reset();
+        restoredState_.store(false, std::memory_order_relaxed);   // audio is running: program changes are the user's again
+        // Recovery: a non-finite output in the last block, or the watchdog, clears the plugin's state.
+        if (needsRecovery_) { needsRecovery_ = false; reset(); ++recoveries_; }
+        // Input guard: one NaN / infinity from upstream (another plugin, an instrument, a glitch) would
+        // otherwise lodge in every feedback path and silence the plugin until it is reset. Non-finite
+        // samples become 0; absurd levels are clamped to +-64 (+36 dBFS). In place: these are the host's
+        // buffers for this block.
+        float inPeak = 0.0f;
+        for (int c = 0; c < info_.numInputs && inputs != nullptr; ++c)
+        {
+            float* in = inputs[c];
+            if (in == nullptr) continue;
+            for (int i = 0; i < numFrames; ++i)
+            {
+                float v = in[i];
+                if (!(v > -64.0f && v < 64.0f)) { v = std::isfinite(v) ? (v > 0.0f ? 64.0f : -64.0f) : 0.0f; in[i] = v; }
+                inPeak = std::fmax(inPeak, std::fabs(v));
+            }
+        }
         if (numFrames > blockSize_) blockSize_ = numFrames;
 
         ProcessContext ctx;
@@ -485,7 +511,33 @@ public:
         process(ctx);
         numMidiIn_ = 0;
         flushMidiOut();
+
+        // Output guard: any non-finite output is zeroed and the plugin is reset before the next block.
+        bool allZero = true;
+        for (int c = 0; c < info_.numOutputs; ++c)
+        {
+            float* out = outputs[c];
+            if (out == nullptr) continue;
+            for (int i = 0; i < numFrames; ++i)
+            {
+                if (!std::isfinite(out[i])) { out[i] = 0.0f; needsRecovery_ = true; }
+                else if (out[i] != 0.0f) allZero = false;
+            }
+        }
+        // Silence watchdog: the input has been active (> -50 dBFS) for 1.5 s while every output sample
+        // was exactly zero, and the plugin is not silent on purpose -> something is stuck: reset.
+        if (inPeak > 0.00316f && allZero && !silenceIsExpected()) watchdogSamples_ += numFrames;
+        else watchdogSamples_ = 0;
+        if (watchdogSamples_ > (int64_t)(1.5 * sampleRate_)) { watchdogSamples_ = 0; needsRecovery_ = true; }
     }
+public:
+    // how many times the guards reset the plugin (for tests)
+    int recoveries() const { return recoveries_; }
+private:
+    bool needsRecovery_ = false;
+    int recoveries_ = 0;
+    int64_t watchdogSamples_ = 0;
+public:
 
     // State: "MPCP" | u32 version(2) | u32 nParams | { u8 idLen, id, f32 plain, f32 normalised }* | u32 extraLen | extra
     // Version 1 chunks (no normalised value) are still accepted. On load the normalised value is used when it
@@ -511,6 +563,9 @@ public:
         saveExtraState(extra);
         putU32((uint32_t)extra.size());
         out.insert(out.end(), extra.begin(), extra.end());
+        // trailer (ignored by older loaders): the selected program, so a reload knows it too
+        out.push_back('P'); out.push_back('R'); out.push_back('O'); out.push_back('G');
+        putU32((uint32_t)currentProgram_);
         return out;
     }
 
@@ -536,13 +591,27 @@ public:
                 const Param& pr = params_[(size_t)i];
                 if (norm >= 0.0f && norm <= 1.0f && std::fabs(pr.toPlain(norm) - plain) <= 1e-4f * (1.0f + std::fabs(plain)))
                     setNormalised(i, norm);
-                else
-                    set(i, plain);
+                else if (std::isfinite(plain))
+                    set(i, plain);                       // (a non-finite value keeps the current one)
                 break;
             }
         }
         uint32_t extraLen = 0;
-        if (getU32(extraLen) && pos + extraLen <= size && extraLen > 0) loadExtraState(data + pos, extraLen);
+        if (getU32(extraLen) && pos + extraLen <= size)
+        {
+            if (extraLen > 0) loadExtraState(data + pos, extraLen);
+            pos += extraLen;
+            uint32_t prog = 0;
+            if (pos + 8 <= size && std::memcmp(data + pos, "PROG", 4) == 0)
+            {
+                pos += 4;
+                if (getU32(prog) && (int)prog < numPrograms()) currentProgram_ = (int)prog;
+            }
+        }
+        // The host restores its own saved program number as well, and may do so after this chunk.
+        // Re-applying that program would overwrite the restored settings, so until audio starts a
+        // request for the program that is already current only selects it (see setProgram).
+        restoredState_.store(true, std::memory_order_release);
         stateLoadPending_.store(true, std::memory_order_release);
         return true;
     }
@@ -558,9 +627,11 @@ public:
     void setProgram(int i)
     {
         if (programs_.empty() || i < 0 || i >= (int)programs_.size()) return;
+        if (restoredState_.load(std::memory_order_acquire) && i == currentProgram_) return;   // project reload: keep the restored state
         currentProgram_ = i;
         const Program& p = programs_[(size_t)i];
-        for (int k = 0; k < numParams() && k < (int)p.plainValues.size(); ++k) set(k, p.plainValues[(size_t)k]);
+        for (int k = 0; k < numParams() && k < (int)p.plainValues.size(); ++k)
+            if (programSetsParam(k)) set(k, p.plainValues[(size_t)k]);
         programLoaded(i);
         stateLoadPending_.store(true, std::memory_order_release);
     }
@@ -629,6 +700,7 @@ protected:
     int blockSize_ = 128;
     bool prepared_ = false;
     std::atomic<bool> stateLoadPending_{false};
+    std::atomic<bool> restoredState_{false};   // a chunk was loaded and audio has not started since
     std::vector<uint8_t> stateBuffer_;
     MidiEvent midiIn_[kMaxMidiEvents];
     int numMidiIn_ = 0;

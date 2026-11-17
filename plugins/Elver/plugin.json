@@ -1,0 +1,17 @@
+{
+  "name": "Elver",
+  "manufacturer": "sureeel",
+  "version": "1.1.0",
+  "format": "vst2",
+  "kind": "instrument",
+  "uid": "SqyC",
+  "numInputs": 0,
+  "numOutputs": 2,
+  "category": "Synth",
+  "file32": "VST/elver-arm32.so",
+  "file64": "VST/elver-arm64.so",
+  "description": "Clean, low-memory two-sided synthesizer: 3 oscillators, filter and envelopes per side, a wave shaper you can draw with your finger, XY blend, mood randomizer.",
+  "author": "Sure Eel",
+  "url": "https://github.com/SureEel/plug-in-collection",
+  "license": "MIT"
+}

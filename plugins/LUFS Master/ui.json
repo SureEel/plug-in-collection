@@ -5,24 +5,24 @@
       "name": "MASTER",
       "controls": [
         { "param": "Mode", "widget": "switch" },
+        { "param": "Live Speed", "widget": "switch" },
+        { "param": "Input Gain", "widget": "knob" },
         { "param": "Target", "widget": "slider", "overlay": "menu" },
-        { "param": "Custom LUFS", "widget": "knob", "visibleWhen": { "param": "Target", "choice": "Custom" } },
+
         { "param": "Ceiling", "widget": "knob" },
+        { "param": "Custom LUFS", "widget": "knob" },
+        { "param": "Max Change", "widget": "knob" },
+        { "param": "Gain Change", "widget": "slider" },
 
-        { "param": "Gain", "widget": "slider" },
-        { "param": "Predicted", "widget": "slider" },
-        { "param": "GR", "widget": "slider" },
-        { "param": "GR Max", "widget": "slider" },
-
-        { "param": "Out Mom LUFS", "widget": "slider" },
-        { "param": "Out ST LUFS", "widget": "slider" },
-        { "param": "Out Int LUFS", "widget": "slider" },
-        { "param": "Out Avg LUFS", "widget": "slider" },
-
+        { "param": "Clear", "widget": "switch" },
+        { "param": "Undo", "widget": "switch" },
         { "param": "Reset", "widget": "switch" },
         { "param": "Refresh", "widget": "switch" },
-        { "param": "Out TP Max", "widget": "slider" },
-        { "param": "In Int LUFS", "widget": "slider" }
+
+        { "param": "Out Int LUFS", "widget": "slider" },
+        { "param": "Out ST LUFS", "widget": "slider" },
+        { "param": "Suggested", "widget": "slider" },
+        { "param": "In Level", "widget": "slider" }
       ]
     },
     {
@@ -40,11 +40,11 @@
 
         { "param": "In TP Max", "widget": "slider" },
         { "param": "Out TP Max", "widget": "slider" },
-        { "param": "GR", "widget": "slider" },
+        { "param": "Limiter GR", "widget": "slider" },
         { "param": "GR Max", "widget": "slider" },
 
-        { "param": "Reset", "widget": "switch" },
-        { "param": "Refresh", "widget": "switch" },
+        { "param": "Gain Change", "widget": "slider" },
+        { "param": "Suggested", "widget": "slider" },
         "empty",
         "empty"
       ]

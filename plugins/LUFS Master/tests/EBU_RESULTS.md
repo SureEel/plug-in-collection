@@ -1,6 +1,4 @@
-> The EBU test audio is not included in this repository. Download the EBU loudness test set (Tech 3341 / 3342) from the EBU website and unzip it into `tests/ebu/` to rerun these tests.
-
-# LUFS Master vs the EBU loudness test set (v05)
+﻿# LUFS Master vs the EBU loudness test set (v05)
 
 Expected values: EBU Tech 3341 v4 (Nov 2023) Table 1, cases 1-23; EBU Tech 3342 v4 Table 1 (LRA).
 All files 48 kHz. Plugin native build, fresh instance per file, Measure mode, readouts polled after every

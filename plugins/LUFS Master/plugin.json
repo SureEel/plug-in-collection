@@ -1,7 +1,7 @@
 {
   "name": "LUFS Master",
   "manufacturer": "sureeel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "format": "vst2",
   "kind": "effect",
   "uid": "S6yP",
@@ -10,7 +10,7 @@
   "category": "Effect",
   "file32": "VST/lufs-master-arm32.so",
   "file64": "VST/lufs-master-arm64.so",
-  "description": "Loudness meter, leveler and transparent true-peak limiter for mastering to LUFS targets (BS.1770 / EBU R128).",
+  "description": "Loudness meter, leveler and true-peak limiter: measure a pass, auto-set the gain, land on a LUFS target (BS.1770 / EBU R128).",
   "author": "Sure Eel",
   "url": "https://github.com/SureEel/plug-in-collection",
   "license": "MIT"

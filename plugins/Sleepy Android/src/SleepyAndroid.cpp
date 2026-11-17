@@ -556,6 +556,13 @@ public:
         reset();
     }
 
+    // Silent on purpose: the VCA / gate closes between notes, or the stutter plays with the dry muted
+    // (a frozen loop of silence is still the player's choice): the watchdog leaves these alone.
+    bool silenceIsExpected() const override
+    {
+        return getBool(kVca) || (getBool(kDryMute) && (getBool(kHold) || getBool(kTrigger))) || get(kMix) < 0.5f;
+    }
+
     // A program was applied (UI thread): set the later settings it carries.
     void programLoaded(int index) override
     {
@@ -898,7 +905,7 @@ private:
         info.name         = "Sleepy Android";
         info.vendor       = "sureeel";   // must match plugin.json "manufacturer"
         info.uniqueId     = MPC_FOURCC(kUid[0], kUid[1], kUid[2], kUid[3]);   // must match plugin.json "uid"
-        info.version      = 1000;
+        info.version = 1001;
         info.isInstrument = false;
         info.numInputs    = 2;
         info.numOutputs   = 2;
