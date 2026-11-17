@@ -8,7 +8,8 @@ Look: a brushed-metal panel with inset plates, in four colour skins chosen by th
   Derelict    - near-black green metal, pale sickly green frames            (Alien palette, dark)
 All pages share ONE background film strip (4 frames, one per skin, bound to Skin), so a skin change
 recolours every page and the plugin keeps a single background image in memory. Controls and type are
-neutral silver / gunmetal so they read on every skin. The Sure Eel logo is embossed faintly.
+neutral silver / gunmetal so they read on every skin. The Elver icon (the Sure Eel logo in the skin's
+accent on a brushed plate) sits in the bottom strip; make_icon() also writes it at 512 px into docs/.
 
 Layout: every page is four sections side by side (one Q-Link bank each, top to bottom) and a bottom
 strip (CPU meter, voices, help). Rules learned on the MPC hardware (Sleepy Android, Hydra Eel):
@@ -120,10 +121,16 @@ PAGES = [
         ("global", ["Volume", "Output", "Voices", "Skin"]),
     ]),
     ("PRESET", [
-        ("preset " + SEP + " tap to choose", ["Preset", ("status", "Status", "status"), None, None]),
+        ("browse " + SEP + " category", ["Browse", MORE, MORE, ("status", "Status", "status")]),
+        ("presets 1 - 8 " + SEP + " tap to load", "LIST:0"),
+        ("presets 9 - 16", "LIST:1"),
+        ("load", ["Load", None, None, None]),
+    ]),
+    ("RANDOM", [
         ("randomize", ["Category", MORE, MORE, "Randomize"]),
-        ("amount " + SEP + " undo", ["Rand Amount", "Undo", "Lock Mod", "Lock Skin"]),
-        ("locks", ["Lock A", "Lock B", "Lock Filter", "Lock Env"]),
+        ("amount " + SEP + " undo", ["Rand Amount", "Undo", None, None]),
+        ("locks " + SEP + " sound", ["Lock A", "Lock B", "Lock Filter", "Lock Env"]),
+        ("locks " + SEP + " more", ["Lock Mod", "Lock Skin", None, None]),
     ]),
     ("SAVE", [
         ("name " + SEP + " letters", "KEYS0"),
@@ -145,7 +152,7 @@ for s in "AB":
 for l in "12":
     SELECTORS["LFO%s Shape" % l] = ["sine", "tri", "saw", "sqr", "s&h"]
     SELECTORS["LFO%s To" % l] = ["pitch", "filter", "amp", "blend"]
-CATS = ["ambient", "pads " + SEP + " winds", "keys " + SEP + " plucks", "leads " + SEP + " bass", "lo-fi psych", "industrial", "noise " + SEP + " chaos"]
+CATS = ["ambient", "pads " + SEP + " winds", "keys " + SEP + " plucks", "leads " + SEP + " bass", "lo-fi psych", "industrial", "noise " + SEP + " chaos", "funk"]
 BIG = {"Category": CATS, "Browse": CATS, "Save In": CATS}
 ACTIONS = {"Randomize": "randomize", "Undo": "undo", "Load": "load", "Save": "name a preset", "Confirm": "confirm save", "Cancel": "cancel"}
 for s in "AB":
@@ -156,7 +163,7 @@ KEY_NAMES = ["Key " + c for c in KEY_CAPS[:36]] + ["Key Space", "Key -", "Backsp
 HELP_FOR = {"Blend": 2, "Pad Y": 1, "Pad Y To": 3, "Routing": 13, "Voices": 20, "Drift": 17, "Drive": 18, "Grit": 18,
             "Ring": 19, "Volume": 21, "Output": 21, "Skin": 22, "Category": 23, "Randomize": 24, "Undo": 24,
             "Rand Amount": 25, "Browse": 27, "Preset": 27, "Load": 27, "Save": 28, "Confirm": 28, "Cancel": 28,
-            "Save In": 28, "Name": 28, "Status": 24, "PAD": 1}
+            "Save In": 28, "Name": 28, "Status": 24, "PAD": 1, "Browse Slot": 27}
 for s in "AB":
     for o in "123":
         HELP_FOR.update({"%s%s Wave" % (s, o): 4, "%s%s Level" % (s, o): 5, "%s%s Octave" % (s, o): 6,
@@ -193,6 +200,7 @@ BIG_W, BIG_H, BIG_GAP_X, BIG_GAP_Y, BIG_Y = 132, 50, 6, 6, 40
 ACT_W, ACT_H = 200, 46
 KEY_W, KEY_H, KEY_GX, KEY_GY, KEY_Y0 = 88, 46, 6, 6, 48
 PAD = (SEC_X0 + 12, SEC_Y + 46, 276, 272)       # the XY pad (section 0, rows 0..2)
+LIST_Y0, LIST_PITCH, LIST_H = 48, 46, 42         # the PRESET page's list rows
 PUCK = 44
 
 
@@ -257,6 +265,54 @@ def plate(img, box, skin, accent_line=True, rad=12):
     return d
 
 
+def logo_mask(size):
+    """the Sure Eel logo as a mask (its lines = 255), size x size, or None"""
+    if not os.path.isfile(LOGO):
+        return None
+    im = Image.open(LOGO).convert("L")
+    w, h = im.size
+    px = im.load()
+    x0 = next(x for x in range(w) if px[x, h // 2] < 60)
+    y0 = next(y for y in range(h) if px[w // 2, y] < 60)
+    x1 = next(x for x in range(w - 1, 0, -1) if px[x, h // 2] < 60)
+    y1 = next(y for y in range(h - 1, 0, -1) if px[w // 2, y] < 60)
+    sq = im.crop((x0 + 2, y0 + 2, x1 - 1, y1 - 1)).resize((size, size), Image.LANCZOS)
+    return sq                                                 # the logo file has light lines on black
+
+
+def make_icon(skin, size):
+    """The Elver icon in a skin's colours: a rounded brushed-metal plate, a rim in the second accent and
+    the Sure Eel logo's lines in the accent colour with a soft glow. RGBA, size x size."""
+    _, metal, plate_rgb, acc, acc2 = skin
+    S = 2                                                     # drawn at 2x, then reduced (smooth edges)
+    n = size * S
+    rad = int(n * 0.2)
+    shape = Image.new("L", (n, n), 0)
+    ImageDraw.Draw(shape).rounded_rectangle((0, 0, n - 1, n - 1), radius=rad, fill=255)
+    base = brushed(n, n, tuple(int((m + p) * 0.5) for m, p in zip(metal, plate_rgb)), seed=size, strength=0.12)
+    out = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    out.paste(base, (0, 0), shape)
+    d = ImageDraw.Draw(out)
+    rim = max(2, n // 64)
+    d.rounded_rectangle((rim // 2, rim // 2, n - 1 - rim // 2, n - 1 - rim // 2), radius=rad, outline=acc2 + (255,), width=rim)
+    d.rounded_rectangle((rim * 2, rim * 2, n - 1 - rim * 2, n - 1 - rim * 2), radius=rad - rim * 2,
+                        outline=tuple(min(255, c + 60) for c in metal) + (90,), width=max(1, rim // 2))
+    inner = int(n * 0.80)
+    m = logo_mask(inner)
+    if m is not None:
+        off = (n - inner) // 2
+        glow = Image.new("RGBA", (n, n), acc + (0,))
+        gm = Image.new("L", (n, n), 0); gm.paste(m.filter(ImageFilter.GaussianBlur(max(2, n // 90))), (off, off))
+        glow.putalpha(gm.point(lambda v: int(v * 0.55)))
+        out = Image.alpha_composite(out, glow)
+        lines = Image.new("RGBA", (n, n), acc + (0,))
+        lm = Image.new("L", (n, n), 0); lm.paste(m, (off, off))
+        lines.putalpha(lm)
+        out = Image.alpha_composite(out, lines)
+        out.putalpha(Image.composite(out.getchannel("A"), Image.new("L", (n, n), 0), shape))
+    return out.resize((size, size), Image.LANCZOS)
+
+
 def background():
     """one film strip: 4 frames (skins) of 1280 x 628, stacked"""
     logo = None
@@ -280,21 +336,10 @@ def background():
         for x, w in ((18, 300), (336, 300), (HELP_X, 1262 - HELP_X)):
             plate(img, (x, STRIP_Y, w, STRIP_H), skin, accent_line=(x == HELP_X), rad=8)
         if logo is not None:
-            # embossed: the logo's edges lift the metal by a few percent
-            emb = logo.filter(ImageFilter.EMBOSS)
+            # the Elver icon, in this skin's colours, in the voices box
+            ic = make_icon(skin, 132)
             lx, ly = 336 + 300 - 132 - 18, STRIP_Y + (STRIP_H - 132) // 2
-            region = img.crop((lx, ly, lx + 132, ly + 132))
-            orig = region.copy()
-            rp, ep = region.load(), emb.load()
-            for yy in range(132):
-                for xx in range(132):
-                    k2 = 1.0 + 0.9 * (ep[xx, yy] - 128) / 128.0
-                    rp[xx, yy] = tuple(max(0, min(255, int(c * k2))) for c in rp[xx, yy])
-            # a soft round mask: no square edge
-            mask = Image.new("L", (132, 132), 0)
-            ImageDraw.Draw(mask).ellipse((10, 10, 121, 121), fill=255)
-            mask = mask.filter(ImageFilter.GaussianBlur(5))
-            img.paste(Image.composite(region, orig, mask), (lx, ly))
+            img.paste(ic, (lx, ly), ic)
         strip.paste(img, (0, k * H))
     return strip
 
@@ -587,6 +632,19 @@ def build_tab(page_name, sections, by_name, help1, help2):
             continue
         if rows == "SPAN":
             continue
+        if isinstance(rows, str) and rows.startswith("LIST:"):
+            half = int(rows[-1])
+            slot_param = by_name["Browse Slot"]
+            for r in range(8):
+                k = half * 8 + r
+                y = SEC_Y + LIST_Y0 + r * LIST_PITCH
+                kids.append(label("row %d" % k, "%d %d %d %d" % (x0 + 12, y, SEC_W - 24, LIST_H), "Value", by_name["Slot %02d" % (k + 1)].handle, ts(20, TEXT)))
+                HIT_SIZES.add((SEC_W - 24, LIST_H))
+                img = "hit_%dx%d.png" % (SEC_W - 24, LIST_H)
+                data = obj(("version", 2), ("onImage", img), ("offImage", img), ("buttonId", k), ("numButtonsInGroup", 17),
+                           ("handleName", slot_param.handle), ("gestureBehaviour", "Instant"))
+                kids.append(G.entry("row button %d" % k, "Button", data, "%d %d %d %d" % (x0 + 12, y, SEC_W - 24, LIST_H), "No", "Show", "Always"))
+            continue
         if isinstance(rows, str) and rows.startswith("SCOPE:"):
             side = rows[-1]
             for j in range(32):
@@ -674,6 +732,8 @@ def write_ui_json():
                 rows = sections[c][1] if c < len(sections) else None
                 if rows == "PAD":
                     row = ["Blend", "Pad Y", None, "Pad Y To"][r]
+                elif isinstance(rows, str) and rows == "LIST:0":
+                    row = ["Browse Slot", None, None, None][r]
                 elif isinstance(rows, str) and rows.startswith("DRAWPAD:"):
                     row = [rows[-1] + " Draw X", rows[-1] + " Draw Y", rows[-1] + " Draw Mix", None][r]
                 elif rows is None or isinstance(rows, str):
@@ -724,10 +784,6 @@ def main():
     for i in range(len(KEY_CAPS)):
         defs.append(obj(("key", "key_%d" % i), ("value", key_def(i))))
 
-    # the preset drop-down's list (84 entries: more than the parameter dump can discover by itself)
-    reps = find(page_data, "replacementStrings")
-    reps[:] = [r for r in reps if find(r, "key") != by_name["Preset"].handle]
-    reps.append(obj(("key", by_name["Preset"].handle), ("value", preset_names())))
     tabs = find(page_data, "tabs")
     assert [p.name for p in pages] == [n for n, _ in PAGES], "ui.json pages out of step"
     for (name, sections), tab in zip(PAGES, tabs):
@@ -751,6 +807,14 @@ def main():
     for img in sorted(G.referenced_images(tui, set()) - own):
         shutil.copy2(os.path.join(kit_dir, img), os.path.join(OUT, img))
     background().save(os.path.join(OUT, "elver_panel.png"), optimize=True)
+    # the icon at 512 px for READMEs and releases: Neon Rain as icon.png, and one per skin
+    docs = os.path.join(PROJECT, "docs")
+    os.makedirs(docs, exist_ok=True)
+    for k, skin in enumerate(SKINS):
+        ic = make_icon(skin, 512)
+        ic.save(os.path.join(docs, "icon_%s.png" % skin[0].lower().replace(" ", "_")), optimize=True)
+        if k == 0:
+            ic.save(os.path.join(docs, "icon.png"), optimize=True)
     pad_field().save(os.path.join(OUT, "pad_field.png"), optimize=True)
     puck().save(os.path.join(OUT, "puck.png"), optimize=True)
     led_bar().save(os.path.join(OUT, "led_bar.png"), optimize=True)

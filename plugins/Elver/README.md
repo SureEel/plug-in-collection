@@ -4,7 +4,7 @@ A clean, simple, low-memory synthesizer for Akai MPC and Force, by Sure Eel.
 
 Two sides, **A** and **B**, each a small complete synth: three oscillators, a filter, an amp envelope and a
 filter envelope. **Blend** (or the XY pad) crossfades between them. A **mood randomizer** builds new sounds
-in seven categories, and presets are organised the same way.
+in eight categories (seven moods from calm to noisy, plus Funk), and presets are organised the same way.
 
 ## Signal flow
 
@@ -21,12 +21,15 @@ LFO 1 / LFO 2 → pitch, filter, amp or blend.   Drift: slow random pitch / filt
 | Page | What is there |
 |---|---|
 | MAIN | XY pad (X = Blend, Y = Pad Y; Pad Y To picks cutoff, morph, resonance or drive), filter cutoff / resonance A and B, Category + Randomize, Undo, Rand Amount, status, Volume |
-| OSC A / OSC B | per oscillator: wave (sine, triangle, saw, square, noise), level, octave, semitone; unison copies, detune, stereo spread |
+| OSC A / OSC B | per oscillator: wave (sine, triangle, saw, square, noise, shape), level, octave, semitone; unison copies, detune, stereo spread |
+| SHAPE A / SHAPE B | the Shaper: Start From, Draw Mix, Mutate, Seed, Bright, Odd/Even, Formant, Fold, Bend, Sync, and a scope of the wave |
+| DRAW A / DRAW B | the drawing pad (64 points) and Smooth / Linear / Steps, Copy Start, Clear, Undo |
 | TUNE | fine tuning and pulse width for all six oscillators |
 | FILTER | type (24 dB LP, 12 dB LP, band-pass, high-pass, notch), cutoff, resonance, envelope amount, key tracking, routing (parallel / series), Blend and Pad Y knobs |
 | ENV | amp and filter ADSR for each side (attack and decay up to 10 s, release up to 20 s) |
 | MOD | LFO 1 and 2 (rate, depth, shape, destination), Drift, Drive, Grit (bit-crush), Ring, Volume, Output, Voices, Skin |
-| PRESET | browse by category, pick a preset, Load; Rand Amount, Undo and the section locks |
+| PRESET | category buttons, then the category's 16 presets as a list: tap one to load it (the loaded one is marked >); Load |
+| RANDOM | Category + Randomize, Rand Amount, Undo and the six section locks |
 | SAVE | type a name on the letter keys, choose the category, Confirm |
 
 Every page shows Elver's own **CPU** load and the **voices** playing / allowed. Touch any control name or
@@ -77,18 +80,24 @@ with the Shaper at its defaults.
 ## Randomize
 
 Pick a **Category** (Ambient, Pads & Winds, Keys & Plucks, Leads & Basses, Lo-Fi Psych, Industrial,
-Noise & Chaos), then tap **Randomize**. It fills both sides, the blend and the modulation with a sound in that
+Noise & Chaos, Funk), then tap **Randomize**. It fills both sides, the blend and the modulation with a sound in that
 mood, and usually picks a fitting skin. **Rand Amount** below 100 % only nudges the current sound toward a new
 one. The **locks** (A, B, Filter, Env, Mod, Skin) keep a section as it is. **Undo** goes back one step.
 Randomize never changes Volume or Output.
 
 ## Presets
 
-On the PRESET page, tap the **Preset** box to open the full list of all 84 presets; picking one loads it.
-The list in the skin is updated with your saved preset names whenever you save (and at start-up).
+On the PRESET page, tap a category, then tap a preset in the list (16 rows: 8 factory, 8 user) to load
+it. The loaded preset is marked with ">"; the list follows when a preset is loaded any other way, and shows
+your saved names as soon as you save.
 
-7 categories × 12 slots: 4 factory presets and 8 user slots each. In the MPC's preset list they appear as
-"AMB Deep Tide", "LEAD Acid Fin", and so on. An empty user slot loads the plain starting sound.
+8 categories × 16 slots: 8 factory presets and 8 user slots each. In the MPC's preset list they appear as
+"AMB Deep Tide", "FUNK Clav Strut", and so on. An empty user slot loads the plain starting sound.
+
+**Funk** (1.2): a randomize mood and 8 presets set by hand, inspired by Minneapolis-sound brass stabs,
+James Brown horn hits and clavinet, prog-rock leads and organ, and early disco strings and octave bass:
+Royal Stab, Brass Poly, Clav Strut, Horn Hit, Prog Lead, Cathedral Organ, Disco Strings, Octave Bass. They
+are original settings in the spirit of those sounds, not copies.
 To save, open SAVE, tap **name a preset** (the name starts as e.g. "Lofi 03" and the category as the one you last
 randomized in), type with the keys (del, < and > move and edit, clear empties), choose **Save In** and tap
 **confirm save**. User presets are stored next to the plugin folder (`.sureeel Elver user presets.bin`) and

@@ -625,10 +625,23 @@
       "name": "PRESET",
       "controls": [
         {
-          "param": "Preset",
-          "widget": "slider",
-          "overlay": "menu"
+          "param": "Browse",
+          "widget": "knob"
         },
+        {
+          "param": "Browse Slot",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Load",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "RANDOM",
+      "controls": [
         {
           "param": "Category",
           "widget": "knob"
@@ -641,7 +654,10 @@
           "param": "Lock A",
           "widget": "switch"
         },
-        "empty",
+        {
+          "param": "Lock Mod",
+          "widget": "switch"
+        },
         "empty",
         {
           "param": "Undo",
@@ -651,12 +667,12 @@
           "param": "Lock B",
           "widget": "switch"
         },
-        "empty",
-        "empty",
         {
-          "param": "Lock Mod",
+          "param": "Lock Skin",
           "widget": "switch"
         },
+        "empty",
+        "empty",
         {
           "param": "Lock Filter",
           "widget": "switch"
@@ -666,10 +682,7 @@
           "param": "Randomize",
           "widget": "switch"
         },
-        {
-          "param": "Lock Skin",
-          "widget": "switch"
-        },
+        "empty",
         {
           "param": "Lock Env",
           "widget": "switch"

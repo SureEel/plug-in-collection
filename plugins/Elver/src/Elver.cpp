@@ -62,8 +62,9 @@ enum ParamIndex
     kKey0,                                       // the letter grid: kNumKeys on/off keys
     kCpu = kKey0 + 42, kVoicesNow, kStatus, kNameEdit, kHelp, kHelp2,
     kShA, kShB = kShA + kShN,                    // 1.1: the two shapers (appended: saved projects keep their order)
-    kPresetPick = kShB + kShN,                   // 1.1: the PRESET page's drop-down (all 84 presets; picking one loads it)
-    kNumParams
+    kPresetPick = kShB + kShN,                   // 1.1: a drop-down of all presets (kept for saved projects; not on screen)
+    kSlotRow0,                                   // 1.2: the PRESET page's list: the browsed category's 16 preset names
+    kNumParams = kSlotRow0 + 16
 };
 // "the sound": what presets, randomize and undo cover. The 1.0 block plus each shaper's settings and
 // drawing (not its buttons, the drawing pad's position or the scope).
@@ -79,18 +80,21 @@ const char kKeyChars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -";   // 38 chara
 enum EditKey { kKeyBack = 38, kKeyLeft, kKeyRight, kKeyClear };
 constexpr int kNameLen = 16;
 
-constexpr int kCats = 7;
-const char* const kCatNames[kCats] = {"Ambient", "Pads & Winds", "Keys & Plucks", "Leads & Basses", "Lo-Fi Psych", "Industrial", "Noise & Chaos"};
-const char* const kCatTags[kCats] = {"AMB", "PAD", "KEY", "LEAD", "LOFI", "IND", "NOIS"};
-constexpr int kFactoryPer = 4, kUserPer = 8, kSlotsPer = kFactoryPer + kUserPer;
+constexpr int kCats = 8;                      // 1.2: Funk added (after the seven moods)
+const char* const kCatNames[kCats] = {"Ambient", "Pads & Winds", "Keys & Plucks", "Leads & Basses", "Lo-Fi Psych", "Industrial", "Noise & Chaos", "Funk"};
+const char* const kCatTags[kCats] = {"AMB", "PAD", "KEY", "LEAD", "LOFI", "IND", "NOIS", "FUNK"};
+constexpr int kFactoryPer = 8, kUserPer = 8, kSlotsPer = kFactoryPer + kUserPer;
 const char* const kFactoryNames[kCats][kFactoryPer] = {
-    {"Deep Tide", "Glass Fog", "Slow Comet", "Silt Bloom"},
-    {"Reed Wind", "Warm Choir", "Night Ferry", "Soft Gale"},
-    {"Glass Keys", "Pluck Drop", "Toy Bell", "Wood Tap"},
-    {"Eel Lead", "Sub Current", "Acid Fin", "Saw Wire"},
-    {"Dusty Tape", "Melt Glow", "Warm Static", "Moth Light"},
-    {"Rust Gears", "Clang Yard", "Piston", "Sheet Metal"},
-    {"Static Swarm", "Broken Radio", "Grit Storm", "Ion Storm"},
+    {"Deep Tide", "Glass Fog", "Slow Comet", "Silt Bloom", "Low Halo", "Still Water", "Drift Ice", "Night Pollen"},
+    {"Reed Wind", "Warm Choir", "Night Ferry", "Soft Gale", "Choir Loft", "Brass Haze", "Wind Organ", "Velvet Air"},
+    {"Glass Keys", "Pluck Drop", "Toy Bell", "Wood Tap", "Ice Mallet", "Harp Wire", "Kalimba Glow", "Felt Keys"},
+    {"Eel Lead", "Sub Current", "Acid Fin", "Saw Wire", "Rubber Bass", "Fat Solo", "Sub Pluck", "Siren Lead"},
+    {"Dusty Tape", "Melt Glow", "Warm Static", "Moth Light", "VHS Choir", "Warped Poly", "Cassette Sun", "Hazy Organ"},
+    {"Rust Gears", "Clang Yard", "Piston", "Sheet Metal", "Steam Press", "Rivet Gun", "Iron Lung", "Foundry"},
+    {"Static Swarm", "Broken Radio", "Grit Storm", "Ion Storm", "Shortwave", "Hornet Nest", "Static Rain", "Data Storm"},
+    // Funk: set by hand (funkPreset), inspired by Minneapolis-sound brass stabs, James Brown horn hits and
+    // clavinet, prog-rock leads and organ, and early disco strings and octave bass
+    {"Royal Stab", "Brass Poly", "Clav Strut", "Horn Hit", "Prog Lead", "Cathedral Organ", "Disco Strings", "Octave Bass"},
 };
 const char* const kSkinNames[4] = {"Neon Rain", "Capsule Red", "Monolith", "Derelict"};
 
@@ -118,11 +122,11 @@ const char* const kHelpText[][2] = {
     {"Voices: most notes at once.",   "Big unison patches use fewer."},   // 20
     {"Volume and Output: global,",    "presets never change them."},      // 21
     {"Skin: the panel's colours.",    "Randomize can pick one."},         // 22
-    {"Category: the mood Randomize",  "uses (calmest to noisiest)."},     // 23
+    {"Category: the mood Randomize",  "uses: calm to noisy, and Funk."},  // 23
     {"Randomize: a new sound in the", "category. Undo goes back."},       // 24
     {"Amount: low nudges, 100 %",     "rerolls."},                        // 25
     {"Locks keep a section as it",    "is when you randomize."},          // 26
-    {"Preset: tap the box and pick",  "from the list: it loads now."},   // 27
+    {"Pick a category, then tap a",   "preset in the list to load it."},  // 27
     {"Save: type a name, pick a",     "category, Confirm."},              // 28
     {"CPU: Elver's own load per",     "audio block. Voices: playing."},   // 29
     {"Shape: a wave you sculpt. Pick", "Shape as an oscillator's wave."}, // 30
@@ -254,6 +258,7 @@ public:
         addParam(mpc::choiceParam("browse_cat", "Browse", cats, 0));
         {
             std::vector<std::string> slots; for (int i = 1; i <= kSlotsPer; ++i) slots.push_back(std::to_string(i));
+            slots.push_back("-");                                        // none picked yet (a tap on any row loads)
             addParam(mpc::choiceParam("browse_slot", "Browse Slot", slots, 0));
         }
         addParam(mpc::boolParam("load", "Load", false));
@@ -326,7 +331,12 @@ public:
                                                     : std::string(kCatTags[c]) + " User " + std::to_string(s - kFactoryPer + 1));
             addParam(mpc::choiceParam("preset_pick", "Preset", names, 0));
         }
-        static_assert(kPresetPick + 1 == kNumParams, "parameter list");
+        for (int k = 0; k < 16; ++k)
+        {   // the list rows (display only): name of the browsed category's preset k, "> " when it is loaded
+            char id[16], nm[16]; std::snprintf(id, sizeof id, "slot_%02d", k); std::snprintf(nm, sizeof nm, "Slot %02d", k + 1);
+            mpc::Param p = mpc::floatParam(id, nm, 0.0f, 1.0f, 0.0f, "", 2); p.automatable = false; addParam(p);
+        }
+        static_assert(kSlotRow0 + 16 == kNumParams && kSlotsPer == 16, "parameter list");
         for (int i = 0; i < kNumParams; ++i) if (isSound(i)) soundList_.push_back(i);
         // shape engine: three table buffers per side (current, fading-out, being built)
         for (int side = 0; side < 2; ++side)
@@ -348,6 +358,7 @@ public:
     bool programSetsParam(int index) const override { return isSound(index) && index != kVolume && index != kOutput && index != kSkin; }
     void programLoaded(int index) override
     {
+        progLoaded_.store(true);                                 // the preset list follows (a project restore does not call this)
         // a loaded preset's shapes are built right away (on the loading thread, never the audio thread), so
         // its first note already plays them; they are swapped in without a crossfade
         for (int side = 0; side < 2; ++side) buildNow(side);
@@ -371,7 +382,7 @@ public:
         lfoPh_[0] = lfoPh_[1] = 0.0f; lfoS_[0] = lfoS_[1] = 0.0f; ampS_ = 1.0f; shL_[0] = shL_[1] = 0.0f; crushHold_ = 0; crushL_ = crushR_ = 0.0f; crushEnv_ = 0.0f;
         gBlend_ = get(kBlend) * 0.01f; gAprev_ = std::cos(gBlend_ * kPi * 0.5f); gBprev_ = std::sin(gBlend_ * kPi * 0.5f); gVol_ = dbToLin(get(kVolume)) * dbToLin(get(kOutput));
         for (int b = kRandomize; b < kNumParams; ++b) btnLast_[b] = getBool(b);
-        pickLast_ = getInt(kPresetPick);         // (progLast_ is not reset: a load's reset must not hide the new preset number)
+        pickLast_ = getInt(kPresetPick); slotLast_ = getInt(kBrowseSlot); lastBrowseCat_ = getInt(kBrowseCat);   // a restore keeps the browse position (progLast_ is not reset: a load's reset must not hide the new preset number)
         silentHeld_ = 0;
         for (int side = 0; side < 2; ++side)
         {   // the drawing pad's current position is the baseline: a load never "draws"
@@ -384,7 +395,7 @@ public:
     {
         const auto t0 = std::chrono::steady_clock::now();
         handleUi();
-        if (statusChanged_ || nameChanged_) publish();          // readouts follow taps at once
+        if (statusChanged_ || nameChanged_ || slotsDirty_) publish();          // readouts follow taps at once
         // ---- MIDI -----------------------------------------------------------------------------------
         int ev = 0;
         const int n = ctx.numFrames;
@@ -428,8 +439,22 @@ public:
             case kStatus: out = statusText(); return true;
             case kNameEdit: out = nameText(); return true;
             case kPresetPick: out = programName(clamp((int)std::lround(plain), 0, kCats * kSlotsPer - 1)); return true;
+            default: break;
+        }
+        if (index >= kSlotRow0 && index < kSlotRow0 + 16)
+        {
+            const int k = index - kSlotRow0, cat = clamp(getInt(kBrowseCat), 0, kCats - 1), prog = cat * kSlotsPer + k;
+            const bool empty = k >= kFactoryPer && !userUsed_[cat][k - kFactoryPer];
+            std::string n = programName(prog);
+            n = empty ? "(empty)" : n.substr(std::min(n.size(), std::strlen(kCatTags[cat]) + 1));
+            out = (prog == currentProgram() ? "> " : "   ") + std::to_string(k + 1) + "  " + n;
+            return true;
+        }
+        switch (index)
+        {
             case kBrowseSlot:
             {
+                if ((int)std::lround(plain) >= kSlotsPer) { out = "-"; return true; }
                 const int prog = getInt(kBrowseCat) * kSlotsPer + (int)std::lround(plain);
                 const std::string s = programName(prog);
                 out = s.size() > 5 ? s.substr(s.find(' ') + 1) : s; return true;
@@ -455,7 +480,7 @@ private:
         mpc::PluginInfo info;
         info.name = "Elver"; info.vendor = "sureeel";
         info.uniqueId = MPC_FOURCC('S', 'q', 'y', 'C');
-        info.version = 1101; info.isInstrument = true; info.numInputs = 0; info.numOutputs = 2;
+        info.version = 1200; info.isInstrument = true; info.numInputs = 0; info.numOutputs = 2;
         return info;
     }
 
@@ -810,21 +835,42 @@ private:
         if (getInt(kHelp2) != getInt(kHelp)) { set(kHelp2, (float)getInt(kHelp)); notifyHostParameterChanged(kHelp2); }
         if (acted(kRandomize)) randomize();
         if (acted(kUndo)) undo();
-        if (getInt(kBrowseCat) != lastBrowseCat_) { lastBrowseCat_ = getInt(kBrowseCat); requestDisplayUpdate(); }
+        if (getInt(kBrowseCat) != lastBrowseCat_)
+        {   // a new category: nothing picked in it yet, so a tap on any row loads
+            lastBrowseCat_ = getInt(kBrowseCat);
+            if (getInt(kBrowseSlot) != kSlotsPer) setAndTell(kBrowseSlot, (float)kSlotsPer);
+            slotLast_ = kSlotsPer; slotsDirty_ = true;
+        }
+        if (getInt(kBrowseSlot) != slotLast_)
+        {
+            slotLast_ = getInt(kBrowseSlot);
+            if (slotLast_ < kSlotsPer)
+            {
+                const int cat = getInt(kBrowseCat), prog = cat * kSlotsPer + slotLast_;
+                if (slotLast_ >= kFactoryPer && !userUsed_[cat][slotLast_ - kFactoryPer]) status_ = kStEmpty;
+                else { setProgram(prog); progLast_ = prog; status_ = kStLoaded; loadedProg_ = prog; requestDisplayUpdate(); }
+                statusChanged_ = true; slotsDirty_ = true;
+            }
+        }
         if (acted(kLoad))
         {
-            const int prog = getInt(kBrowseCat) * kSlotsPer + getInt(kBrowseSlot);
-            const int slot = getInt(kBrowseSlot);
+            const int slot = std::min(getInt(kBrowseSlot), kSlotsPer - 1);
+            const int prog = getInt(kBrowseCat) * kSlotsPer + slot;
             if (slot >= kFactoryPer && !userUsed_[getInt(kBrowseCat)][slot - kFactoryPer]) { status_ = kStEmpty; }
             else { setProgram(prog); status_ = kStLoaded; loadedProg_ = prog; requestDisplayUpdate(); }
             statusChanged_ = true;
         }
         // the preset drop-down: a new pick loads that preset; a preset loaded any other way moves the pick
-        if (currentProgram() != progLast_)
+        if (progLoaded_.exchange(false))
         {
             progLast_ = currentProgram();
             if (getInt(kPresetPick) != progLast_) setAndTell(kPresetPick, (float)progLast_);
             pickLast_ = progLast_;
+            // the list shows the loaded preset's category, with it marked
+            const int cat = progLast_ / kSlotsPer, slot = progLast_ % kSlotsPer;
+            if (getInt(kBrowseCat) != cat) setAndTell(kBrowseCat, (float)cat);
+            if (getInt(kBrowseSlot) != slot) setAndTell(kBrowseSlot, (float)slot);
+            lastBrowseCat_ = cat; slotLast_ = slot; slotsDirty_ = true;
         }
         if (getInt(kPresetPick) != pickLast_)
         {
@@ -840,7 +886,7 @@ private:
         for (int k = 0; k < kNumKeys; ++k) if (acted(kKey0 + k)) typeKey(k);
         for (int side = 0; side < 2; ++side) drawUi(side);
         const int done = saveDone_.exchange(-1);
-        if (done >= 0) { status_ = kStSaved; savedProg_ = done; statusChanged_ = true; nameChanged_ = true; requestDisplayUpdate(); }
+        if (done >= 0) { status_ = kStSaved; savedProg_ = done; statusChanged_ = true; nameChanged_ = true; slotsDirty_ = true; requestDisplayUpdate(); }
     }
 
     // ---- drawing: the DRAW page's XY pad paints the 64 points; strokes are filled in between touches ----
@@ -986,7 +1032,8 @@ private:
         for (int side = 0; side < 2; ++side)
         {
             const int b = side ? kB : kA;
-            const int nOsc = cat == 2 || cat == 3 ? 1 + (int)(rng_.nextFloat() * 2) : 1 + (int)(rng_.nextFloat() * 3);
+            const bool harsh = cat == 5 || cat == 6;
+            const int nOsc = cat == 2 || cat == 3 || cat == 7 ? 1 + (int)(rng_.nextFloat() * 2) : 1 + (int)(rng_.nextFloat() * 3);
             for (int o = 0; o < 3; ++o)
             {
                 const int p = b + kO + o * 6;
@@ -999,18 +1046,20 @@ private:
                     case 3: w = pick({kSaw, kSaw, kSquare, kSquare, kTri}); break;
                     case 4: w = pick({kTri, kSaw, kSquare, kSine}); break;
                     case 5: w = pick({kSquare, kSaw, kNoise, kSquare}); break;
+                    case 7: w = pick({kSaw, kSaw, kSquare, kSquare, kTri, kSaw}); break;
                     default: w = pick({kNoise, kSquare, kSaw, kNoise, kSine}); break;
                 }
                 t.v[p] = (float)w;
                 t.v[p + 1] = o < nOsc ? rnd(o == 0 ? 60.0f : 25.0f, o == 0 ? 90.0f : 70.0f) : 0.0f;
                 int oc = cat == 3 && side == 1 ? pick({-2, -1, -1, 0}) : pick({0, 0, 0, -1, 1});
                 if (cat == 0) oc = pick({0, 0, -1, 1});
+                if (cat == 7) oc = side == 1 ? pick({-1, -1, 0}) : pick({0, 0, 1});   // funk: octave basses
                 t.v[p + 2] = (float)oc;
-                t.v[p + 3] = (float)(cat >= 5 ? kHarsh[(int)(rng_.nextFloat() * 7) % 7] * (o > 0) : (o == 0 ? 0 : kIntervals[(int)(rng_.nextFloat() * 9) % 9]));
-                t.v[p + 4] = cat == 4 ? rnd(-35.0f, 35.0f) : (cat >= 5 ? rnd(-50.0f, 50.0f) : rnd(-6.0f, 6.0f));
-                t.v[p + 5] = cat >= 5 ? rnd(8.0f, 92.0f) : rnd(25.0f, 75.0f);
+                t.v[p + 3] = (float)(harsh ? kHarsh[(int)(rng_.nextFloat() * 7) % 7] * (o > 0) : (o == 0 ? 0 : kIntervals[(int)(rng_.nextFloat() * 9) % 9]));
+                t.v[p + 4] = cat == 4 ? rnd(-35.0f, 35.0f) : (harsh ? rnd(-50.0f, 50.0f) : rnd(-6.0f, 6.0f));
+                t.v[p + 5] = harsh ? rnd(8.0f, 92.0f) : (cat == 7 ? rnd(12.0f, 50.0f) : rnd(25.0f, 75.0f));
             }
-            const float uniMax = cat == 2 || cat == 3 ? 2.0f : 4.0f;
+            const float uniMax = cat == 2 || cat == 3 ? 2.0f : (cat == 7 ? 3.0f : 4.0f);
             t.v[b + kUni] = std::floor(rnd(1.0f, uniMax + 0.99f));
             t.v[b + kDet] = cat == 4 ? rnd(20.0f, 60.0f) : (cat == 6 ? rnd(0.0f, 100.0f) : rnd(4.0f, 25.0f));
             t.v[b + kSpr] = rnd(30.0f, 100.0f);
@@ -1023,6 +1072,7 @@ private:
                 case 3: t.v[b + kFType] = (float)pick({kLP24, kLP24, kLP12}); t.v[b + kCut] = rlog(200, 2200); t.v[b + kRes] = rnd(20, 70); t.v[b + kFEnv] = rnd(30, 85); break;
                 case 4: t.v[b + kFType] = (float)pick({kLP12, kLP24}); t.v[b + kCut] = rlog(300, 1600); t.v[b + kRes] = rnd(10, 40); t.v[b + kFEnv] = rnd(-10, 30); break;
                 case 5: t.v[b + kFType] = (float)pick({kBP, kHP, kNotch, kLP24}); t.v[b + kCut] = rlog(300, 6000); t.v[b + kRes] = rnd(60, 95); t.v[b + kFEnv] = rnd(-60, 80); break;
+                case 7: t.v[b + kFType] = (float)pick({kLP24, kLP24, kLP12}); t.v[b + kCut] = rlog(500, 3500); t.v[b + kRes] = rnd(10, 45); t.v[b + kFEnv] = rnd(30, 80); break;
                 default: t.v[b + kFType] = (float)pick({kLP24, kLP12, kBP, kHP, kNotch}); t.v[b + kCut] = rlog(60, 15000); t.v[b + kRes] = rnd(0, 95); t.v[b + kFEnv] = rnd(-100, 100); break;
             }
             t.v[b + kKeyTrk] = rnd(20, 80);
@@ -1036,6 +1086,7 @@ private:
                 case 3: aA = rlog(1, 20); aD = rlog(100, 600); aS = rnd(40, 90); aR = rlog(50, 300); fA = rlog(1, 30); fD = rlog(100, 400); fS = rnd(10, 50); fR = rlog(50, 300); break;
                 case 4: aA = rlog(5, 200); aD = rlog(200, 1500); aS = rnd(40, 90); aR = rlog(300, 2000); fA = rlog(5, 300); fD = rlog(200, 1500); fS = rnd(20, 70); fR = rlog(300, 2000); break;
                 case 5: aA = rlog(1, 10); aD = rlog(50, 300); aS = rnd(20, 60); aR = rlog(50, 400); fA = rlog(1, 10); fD = rlog(30, 250); fS = rnd(0, 40); fR = rlog(50, 300); break;
+                case 7: aA = rlog(1, 12); aD = rlog(120, 700); aS = rnd(20, 80); aR = rlog(60, 400); fA = rlog(1, 10); fD = rlog(80, 500); fS = rnd(10, 50); fR = rlog(60, 400); break;
                 default: aA = rlog(1, 3000); aD = rlog(20, 4000); aS = rnd(0, 100); aR = rlog(20, 8000); fA = rlog(1, 3000); fD = rlog(20, 4000); fS = rnd(0, 100); fR = rlog(20, 8000); break;
             }
             t.v[b + kAA] = aA; t.v[b + kAD] = aD; t.v[b + kAS] = aS; t.v[b + kAR] = aR;
@@ -1043,7 +1094,7 @@ private:
         }
         // blend, pad, routing
         t.v[kBlend] = rnd(15, 85); t.v[kPadY] = rnd(30, 70); t.v[kPadDest] = (float)pick({0, 0, 1, 2, 3});
-        t.v[kRouting] = (float)(cat >= 5 ? pick({0, 1}) : pick({0, 0, 0, 1}));
+        t.v[kRouting] = (float)(cat == 5 || cat == 6 ? pick({0, 1}) : pick({0, 0, 0, 1}));
         // keep the result audible: two filters in series must overlap, band / high-pass not too low,
         // and a negative envelope may not close a filter below about 80 Hz
         if (t.v[kRouting] > 0.5f && (int)t.v[kA + kFType] <= kLP12)
@@ -1078,15 +1129,16 @@ private:
             case 2: l1r = rlog(3.0f, 7.0f); l1d = rnd(0, 15); l1s = 0; l1t = 0; l2r = rlog(0.2f, 2.0f); l2d = rnd(0, 20); l2s = 0; l2t = 1; break;
             case 3: l1r = rlog(4.0f, 7.0f); l1d = rnd(0, 20); l1s = 0; l1t = 0; l2r = rlog(0.2f, 4.0f); l2d = rnd(10, 50); l2s = pick({0, 1, 2}); l2t = 1; break;
             case 4: l1r = rlog(0.1f, 0.8f); l1d = rnd(5, 25); l1s = pick({0, 1}); l1t = 0; l2r = rlog(0.05f, 0.5f); l2d = rnd(10, 40); l2s = pick({0, 4}); l2t = 1; break;
+            case 7: l1r = rlog(4.5f, 6.5f); l1d = rnd(0, 15); l1s = 0; l1t = 0; l2r = rlog(0.1f, 1.5f); l2d = rnd(0, 25); l2s = 0; l2t = 1; break;
             case 5: l1r = rlog(2.0f, 12.0f); l1d = rnd(40, 90); l1s = pick({3, 4, 2}); l1t = pick({1, 2}); l2r = rlog(1.0f, 8.0f); l2d = rnd(30, 80); l2s = pick({3, 4}); l2t = pick({1, 2, 3}); break;
             default: l1r = rlog(0.5f, 20.0f); l1d = rnd(30, 100); l1s = pick({4, 3, 2}); l1t = pick({0, 1, 2, 3}); l2r = rlog(0.5f, 20.0f); l2d = rnd(30, 100); l2s = pick({4, 3}); l2t = pick({0, 1, 2, 3}); break;
         }
         t.v[kL1Rate] = l1r; t.v[kL1Depth] = l1d; t.v[kL1Shape] = (float)l1s; t.v[kL1Dest] = (float)l1t;
         t.v[kL2Rate] = l2r; t.v[kL2Depth] = l2d; t.v[kL2Shape] = (float)l2s; t.v[kL2Dest] = (float)l2t;
-        const float dr[kCats][2] = {{30, 80}, {5, 30}, {0, 10}, {0, 15}, {50, 100}, {0, 20}, {40, 100}};
-        const float dv[kCats][2] = {{0, 15}, {0, 20}, {0, 15}, {10, 45}, {20, 60}, {40, 90}, {20, 100}};
-        const float gr[kCats][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {25, 70}, {0, 30}, {30, 100}};
-        const float rg[kCats][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 10}, {0, 15}, {40, 100}, {20, 100}};
+        const float dr[kCats][2] = {{30, 80}, {5, 30}, {0, 10}, {0, 15}, {50, 100}, {0, 20}, {40, 100}, {0, 15}};
+        const float dv[kCats][2] = {{0, 15}, {0, 20}, {0, 15}, {10, 45}, {20, 60}, {40, 90}, {20, 100}, {5, 35}};
+        const float gr[kCats][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 0}, {25, 70}, {0, 30}, {30, 100}, {0, 0}};
+        const float rg[kCats][2] = {{0, 0}, {0, 0}, {0, 0}, {0, 10}, {0, 15}, {40, 100}, {20, 100}, {0, 0}};
         t.v[kDrift] = rnd(dr[cat][0], dr[cat][1]); t.v[kDrive] = rnd(dv[cat][0], dv[cat][1]);
         t.v[kGrit] = rnd(gr[cat][0], gr[cat][1]); t.v[kRing] = rnd(rg[cat][0], rg[cat][1]);
         shapeTarget(cat, t);
@@ -1098,7 +1150,7 @@ private:
         static const int kPool[kCats][8] = {
             {0, 1, 10, 13, 28, 30, 44, 51}, {3, 5, 10, 12, 15, 26, 31, 33}, {18, 20, 22, 23, 24, 26, 29, 46},
             {2, 4, 6, 8, 9, 25, 35, 41}, {3, 8, 15, 17, 30, 37, 40, 52}, {21, 23, 34, 36, 38, 39, 42, 57},
-            {54, 55, 56, 57, 58, 59, 36, 38}};
+            {54, 55, 56, 57, 58, 59, 36, 38}, {26, 29, 31, 2, 6, 20, 24, 8}};
         static const float kRange[kCats][7][2] = {   // bright, odd/even, formant, fold, bend, sync, mutate
             {{-60, 0}, {-30, 30}, {10, 40}, {0, 5}, {0, 15}, {1, 1}, {0, 20}},
             {{-40, 20}, {-40, 40}, {20, 70}, {0, 10}, {0, 20}, {1, 1}, {0, 25}},
@@ -1106,9 +1158,10 @@ private:
             {{0, 60}, {-60, 60}, {20, 60}, {0, 30}, {0, 30}, {1, 3}, {0, 15}},
             {{-60, -10}, {-40, 40}, {20, 70}, {0, 10}, {0, 30}, {1, 1}, {20, 60}},
             {{0, 80}, {-100, 100}, {30, 90}, {20, 80}, {10, 70}, {1, 4}, {0, 40}},
-            {{-100, 100}, {-100, 100}, {0, 100}, {0, 100}, {0, 100}, {1, 6}, {30, 100}}};
-        static const float kFormantP[kCats] = {0.3f, 0.6f, 0.2f, 0.25f, 0.6f, 0.3f, 0.4f};
-        static const float kShapeP[kCats] = {0.35f, 0.35f, 0.3f, 0.25f, 0.4f, 0.45f, 0.5f};
+            {{-100, 100}, {-100, 100}, {0, 100}, {0, 100}, {0, 100}, {1, 6}, {30, 100}},
+            {{-10, 50}, {-40, 40}, {10, 50}, {0, 15}, {0, 30}, {1, 2}, {0, 15}}};
+        static const float kFormantP[kCats] = {0.3f, 0.6f, 0.2f, 0.25f, 0.6f, 0.3f, 0.4f, 0.25f};
+        static const float kShapeP[kCats] = {0.35f, 0.35f, 0.3f, 0.25f, 0.4f, 0.45f, 0.5f, 0.3f};
         for (int side = 0; side < 2; ++side)
         {
             const int b = side ? kShB : kShA, o0 = side ? kB : kA;
@@ -1164,7 +1217,7 @@ private:
         }
         if (!getBool(kLockSkin))
         {   // the skin follows the mood (or any skin, at random)
-            static const int kMoodSkin[kCats] = {2, 0, 2, 1, 0, 3, 3};
+            static const int kMoodSkin[kCats] = {2, 0, 2, 1, 0, 3, 3, 0};
             const int s = rng_.nextFloat() < 0.6f ? kMoodSkin[cat] : (int)(rng_.nextFloat() * 4) % 4;
             if (s != getInt(kSkin)) { setAndTell(kSkin, (float)s); ++changed; }
         }
@@ -1193,10 +1246,13 @@ private:
                 if (s < kFactoryPer)
                 {
                     // seeds re-rolled where the first draw came out too quiet (levels checked by elver_test)
-                    static const uint32_t kReroll[kCats][kFactoryPer] = {{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,0,0,0},{0,2,0,0},{2,2,1,1}};   // 1.1: three re-rolled after Shape joined the moods
+                    static const uint32_t kReroll[kCats][kFactoryPer] = {   // seeds re-rolled where a draw came out too quiet
+                        {0,0,0,0, 0,0,0,0}, {0,0,0,0, 0,0,0,0}, {0,0,0,0, 0,0,2,0}, {0,0,0,0, 0,0,0,0},
+                        {0,0,0,0, 0,0,0,0}, {0,2,0,0, 0,0,0,1}, {2,2,1,1, 0,0,4,0}, {0,0,0,0, 0,0,0,0}};
                     rng_.reseed(0xE1E0u + (uint32_t)(c * 97 + s * 13) + kReroll[c][s] * 7919u);
                     Target t; moodTargetFrom(c, v, t);
                     for (int i : soundList_) v[(size_t)i] = t.v[i];
+                    if (c == 7) funkPreset(s, v);
                     std::snprintf(nm, sizeof nm, "%s %s", kCatTags[c], kFactoryNames[c][s]);
                 }
                 else std::snprintf(nm, sizeof nm, "%s (empty)", kCatTags[c]);
@@ -1204,6 +1260,49 @@ private:
                 programs_.back().name.reserve(28);
             }
         for (int i : soundList_) set(i, param(i).def);                  // back to the defaults (the host then selects program 0)
+    }
+    // Funk, by hand: side A only (Blend 0), no grit or ring. Plain values.
+    void funkPreset(int s, std::vector<float>& v)
+    {
+        auto P = [&](int i, float x) { v[(size_t)i] = x; };
+        auto osc = [&](int o, int wave, float lvl, int oct, int semi, float fine, float pw) {
+            const int b = kA + kO + o * 6; P(b, (float)wave); P(b + 1, lvl); P(b + 2, (float)oct); P(b + 3, (float)semi); P(b + 4, fine); P(b + 5, pw); };
+        auto filt = [&](int type, float cut, float res, float env, float kt) { P(kA + kFType, (float)type); P(kA + kCut, cut); P(kA + kRes, res); P(kA + kFEnv, env); P(kA + kKeyTrk, kt); };
+        auto fenv = [&](float a, float d, float sus, float r) { P(kA + kFA, a); P(kA + kFD, d); P(kA + kFS, sus); P(kA + kFR, r); };
+        auto amp = [&](float a, float d, float sus, float r) { P(kA + kAA, a); P(kA + kAD, d); P(kA + kAS, sus); P(kA + kAR, r); };
+        auto uni = [&](int n, float det, float spr) { P(kA + kUni, (float)n); P(kA + kDet, det); P(kA + kSpr, spr); };
+        auto lfo1 = [&](float rate, float depth, int dest) { P(kL1Rate, rate); P(kL1Depth, depth); P(kL1Shape, 0); P(kL1Dest, (float)dest); };
+        P(kBlend, 0); P(kPadY, 50); P(kPadDest, 0); P(kRouting, 0); P(kGrit, 0); P(kRing, 0); P(kDrift, 5); P(kDrive, 10);
+        P(kL1Depth, 0); P(kL2Depth, 0);
+        for (int o = 0; o < 3; ++o) osc(o, kSaw, 0, 0, 0, 0, 50);
+        uni(1, 10, 60);
+        switch (s)
+        {
+            case 0:  // Royal Stab: bright detuned saw brass, a quick filter snap
+                osc(0, kSaw, 85, 0, 0, 0, 50); osc(1, kSaw, 60, 0, 0, 9, 50); uni(3, 14, 70);
+                filt(kLP24, 900, 25, 70, 50); fenv(2, 260, 20, 200); amp(3, 350, 55, 220); P(kDrive, 15); lfo1(5.5f, 4, 0); break;
+            case 1:  // Brass Poly: softer swell, a slow filter
+                osc(0, kSaw, 80, 0, 0, 0, 50); osc(1, kSaw, 70, 0, 0, 8, 50); uni(2, 12, 80);
+                filt(kLP24, 1400, 15, 45, 50); fenv(60, 500, 40, 400); amp(40, 400, 80, 350); break;
+            case 2:  // Clav Strut: narrow pulse, plucked, tracking the keys
+                osc(0, kSquare, 85, 0, 0, 0, 20); osc(1, kSaw, 40, 1, 0, 0, 50);
+                filt(kLP12, 1800, 40, 60, 70); fenv(1, 160, 10, 80); amp(1, 220, 25, 90); P(kDrive, 20); break;
+            case 3:  // Horn Hit: a short stab
+                osc(0, kSaw, 85, 0, 0, 0, 50); osc(1, kSquare, 60, 0, 0, 0, 40); uni(2, 10, 60);
+                filt(kLP24, 700, 30, 85, 50); fenv(4, 180, 15, 120); amp(4, 300, 25, 150); break;
+            case 4:  // Prog Lead: saw over a square an octave down, vibrato, a little drive
+                osc(0, kSaw, 85, 0, 0, 0, 50); osc(1, kSquare, 50, -1, 0, 0, 50);
+                filt(kLP24, 1200, 55, 50, 60); fenv(5, 400, 50, 300); amp(2, 300, 85, 250); lfo1(5.5f, 12, 0); P(kDrive, 25); break;
+            case 5:  // Cathedral Organ: the full drawbar organ from the Shape library
+                osc(0, kShape, 85, 0, 0, 0, 50); P(kShA + kShStart, 29);
+                filt(kLP12, 6000, 5, 0, 30); fenv(5, 300, 100, 300); amp(15, 100, 100, 300); lfo1(6.0f, 8, 0); P(kDrive, 8); break;
+            case 6:  // Disco Strings: wide unison saws, slow attack, gentle chorus wobble
+                osc(0, kSaw, 80, 0, 0, 0, 50); osc(1, kSaw, 70, 0, 0, 10, 50); uni(4, 22, 100);
+                filt(kLP12, 2500, 10, 10, 40); fenv(300, 800, 60, 900); amp(350, 500, 90, 900); lfo1(5.0f, 6, 0); P(kDrift, 15); P(kDrive, 0); break;
+            default: // Octave Bass: saw an octave down with a square on the note
+                osc(0, kSaw, 85, -1, 0, 0, 50); osc(1, kSquare, 60, 0, 0, 0, 50);
+                filt(kLP24, 450, 35, 65, 40); fenv(1, 180, 20, 100); amp(1, 250, 70, 80); P(kDrive, 15); break;
+        }
     }
     // the generator, starting from given values (used before the parameters' atomics matter)
     void moodTargetFrom(int c, const std::vector<float>& base, Target& t)
@@ -1219,7 +1318,7 @@ private:
         const int cat = lastRandCat_ >= 0 ? lastRandCat_ : getInt(kCategory);
         setAndTell(kSaveCat, (float)cat);
         int n = 1; for (int u = 0; u < kUserPer; ++u) n += userUsed_[cat][u];
-        std::snprintf(name_, sizeof name_, "%s %02d", cat == 3 ? "Lead" : (cat == 1 ? "Pad" : (cat == 2 ? "Keys" : (cat == 4 ? "Lofi" : (cat == 5 ? "Metal" : (cat == 6 ? "Noise" : "Ambient"))))), n);
+        std::snprintf(name_, sizeof name_, "%s %02d", cat == 3 ? "Lead" : (cat == 1 ? "Pad" : (cat == 2 ? "Keys" : (cat == 4 ? "Lofi" : (cat == 5 ? "Metal" : (cat == 6 ? "Noise" : (cat == 7 ? "Funk" : "Ambient")))))), n);
         cursor_ = (int)std::strlen(name_);
         status_ = kStNaming; statusChanged_ = true; nameChanged_ = true;
     }
@@ -1293,9 +1392,10 @@ private:
         size_t head = 5, count = kNumSound;
         if (d[4] == 2) { if (d.size() < 7) return; count = (size_t)d[5] | ((size_t)d[6] << 8); head = 7; }
         const size_t rec = 2 + (kNameLen + 1) + 4 * count;
-        if (d.size() < head + rec * kCats * kUserPer) return;
+        const int fileCats = (int)std::min<size_t>((size_t)kCats, (d.size() - head) / (rec * kUserPer));
+        if (fileCats < 1) return;
         const size_t use = std::min(count, soundList_.size());
-        for (int c = 0; c < kCats; ++c)
+        for (int c = 0; c < fileCats; ++c)
             for (int u = 0; u < kUserPer; ++u)
             {
                 const uint8_t* r = d.data() + head + rec * (size_t)(c * kUserPer + u);
@@ -1311,7 +1411,6 @@ private:
     }
     void writerLoop()
     {
-        syncSkinList();                                          // the drop-down shows the saved names from the start
         while (!quit_.load())
         {
             const int prog = savePending_.load();
@@ -1325,7 +1424,6 @@ private:
                 userUsed_[c][u] = 1; userSkin_[c][u] = (uint8_t)saveSkin_;
                 std::snprintf(savedNameDisp_, sizeof savedNameDisp_, "%s", full);
                 writeUserFile();
-                syncSkinList();
                 savePending_.store(-1);
                 saveDone_.store(prog);
             }
@@ -1406,6 +1504,11 @@ private:
         cpuDisp_.store(cpu_);
         if (std::fabs(cpu_ - lastCpu_) > 0.002f) { lastCpu_ = cpu_; setNormalised(kCpu, clamp(cpu_ * 4.0f, 0.0f, 1.0f)); notifyHostParameterChanged(kCpu); }
         if (voicesNow_ != voicesDisp_.load() || limit_ != limitDisp_.load()) { voicesDisp_.store(voicesNow_); limitDisp_.store(limit_); bump(kVoicesNow, serialV_); }
+        if (slotsDirty_)
+        {   // the list's 16 rows redraw (their text comes from formatValue)
+            slotsDirty_ = false;
+            for (int k = 0; k < 16; ++k) bump(kSlotRow0 + k, serialSlot_);
+        }
         if (statusChanged_)
         {
             statusChanged_ = false; statusDisp_.store(status_); countDisp_.store(statusCount_); catDisp_.store(clamp(lastRandCat_, 0, kCats - 1)); loadedDisp_.store(loadedProg_);
@@ -1440,7 +1543,9 @@ private:
     bool sustain_ = false, expectSound_ = false;
     int silentHeld_ = 0, watchdogResets_ = 0;
     float cpu_ = 0.0f, lastCpu_ = -1.0f;
-    int pickLast_ = 0, progLast_ = 0;
+    int pickLast_ = 0, progLast_ = 0, slotLast_ = -1, serialSlot_ = 0;
+    bool slotsDirty_ = true;
+    std::atomic<bool> progLoaded_{false};
     int pubCount_ = 0, serialV_ = 0, serialS_ = 0, serialN_ = 0, lastBrowseCat_ = -1;
     std::atomic<float> cpuDisp_{0.0f};
     std::atomic<int> voicesDisp_{-1}, limitDisp_{-1}, statusDisp_{kStReady}, countDisp_{0}, catDisp_{0}, loadedDisp_{0};

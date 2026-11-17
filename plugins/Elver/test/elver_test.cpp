@@ -34,7 +34,7 @@ struct Plug
 {
     AEffect* e = nullptr;
     VstIntPtr call(VstInt32 op, VstInt32 i = 0, VstIntPtr v = 0, void* p = nullptr, float o = 0) { return e->dispatcher(e, op, i, v, p, o); }
-    void open(int prog = 4) {   // 4 = 'AMB (empty)': the default sound
+    void open(int prog = 8) {   // 8 = 'AMB (empty)', the first user slot: the default sound
         e = g_main(cb); call(effSetSampleRate, 0, 0, nullptr, (float)SR); call(effSetBlockSize, 0, 128); call(effOpen); call(effSetProgram, 0, prog); call(effMainsChanged, 0, 1); call(effStartProcess); }
     void close() { call(effStopProcess); call(effMainsChanged, 0, 0); call(effClose); }
     std::map<std::string, int> idx;
@@ -216,7 +216,7 @@ int main(int argc, char** argv)
         for (int k = 0; k < tries; ++k)
         {
             static Plug p; static bool opened = false; if (!opened) { p.open(); opened = true; }
-            p.set("Category", cat / 6.0f); p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(30)); p.render(1.0, {{0, 0xB0, 120, 0}}); p.run(0.05);   // all sound off between rolls
+            p.set("Category", cat / 7.0f); p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(30)); p.render(1.0, {{0, 0xB0, 120, 0}}); p.run(0.05);   // all sound off between rolls
             std::vector<float> L, R;
             p.render(4.0, {on(0, 48), off((int)(0.9 * SR), 48), on((int)(1.0 * SR), 55), on((int)(1.0 * SR), 60), on((int)(1.0 * SR), 64),
                            off((int)(2.0 * SR), 55), off((int)(2.0 * SR), 60), off((int)(2.0 * SR), 64), on((int)(2.2 * SR), 72), off((int)(2.6 * SR), 72)}, &L, &R);
@@ -336,7 +336,7 @@ int main(int argc, char** argv)
         {
             char nm[256] = {0}; p.call(effGetParamName, i, 0, nm);
             const std::string name = nm;
-            if (name.rfind("Key ", 0) == 0 || name == "Help" || name == "Help 2" || name == "Preset") continue;
+            if (name.rfind("Key ", 0) == 0 || name == "Help" || name == "Help 2" || name == "Preset" || name.rfind("Slot ", 0) == 0) continue;
             // action buttons act on every change: pressing Save / Confirm here would really save a preset
             static const char* const kActions[] = {"Randomize", "Undo", "Load", "Save", "Confirm", "Cancel", "Backspace", "Left", "Right", "Clear",
                                                    "A Copy Start", "A Clear Draw", "A Undo Draw", "B Copy Start", "B Clear Draw", "B Undo Draw"};
@@ -430,9 +430,9 @@ int main(int argc, char** argv)
         const int nSound = p.find("Category");
         bool levelsKept = true, catsDiffer = true, allChanged = true; std::string per;
         std::vector<float> prevRelease;
-        for (int c = 0; c < 7; ++c)
+        for (int c = 0; c < 8; ++c)
         {
-            p.set("Category", c / 6.0f);
+            p.set("Category", c / 7.0f);
             const std::vector<float> before = snap();
             p.tap("Randomize"); p.run(0.1);
             const std::vector<float> after = snap();
@@ -444,7 +444,7 @@ int main(int argc, char** argv)
         // mood character: Ambient's releases long, Keys' attacks short
         p.set("Category", 0.0f); p.tap("Randomize"); p.run(0.1);
         const std::string ambRel = p.text("A Release"), ambAtt = p.text("A Attack");
-        p.set("Category", 2.0f / 6.0f); p.tap("Randomize"); p.run(0.1);
+        p.set("Category", 2.0f / 7.0f); p.tap("Randomize"); p.run(0.1);
         const std::string keyAtt = p.text("A Attack");
         // locks: lock A and the skin, randomize: A's oscillators and the skin stay
         p.set("Lock A", 1.0f); p.set("Lock Skin", 1.0f);
@@ -455,7 +455,7 @@ int main(int argc, char** argv)
         const bool bMoved = a2[p.find("B1 Level")] != b2[p.find("B1 Level")] || a2[p.find("B Cutoff")] != b2[p.find("B Cutoff")];
         // the skin changes when not locked (over several tries)
         p.set("Lock Skin", 0.0f); p.set("Lock A", 0.0f);
-        std::set<int> skins; for (int k = 0; k < 14; ++k) { p.set("Category", (k % 7) / 6.0f); p.tap("Randomize"); p.run(0.05); skins.insert((int)std::lround(p.getN("Skin") * 3)); }
+        std::set<int> skins; for (int k = 0; k < 16; ++k) { p.set("Category", (k % 8) / 7.0f); p.tap("Randomize"); p.run(0.05); skins.insert((int)std::lround(p.getN("Skin") * 3)); }
         // undo restores everything exactly, including the skin
         const std::vector<float> b3 = snap(); p.tap("Randomize"); p.run(0.1); p.tap("Undo"); p.run(0.1);
         const std::vector<float> u3 = snap();
@@ -464,7 +464,7 @@ int main(int argc, char** argv)
         std::snprintf(d, sizeof d, "Ambient: attack %s, release %s; Keys: attack %s; skins seen %zu; status: %s", ambAtt.c_str(), ambRel.c_str(), keyAtt.c_str(), skins.size(), per.substr(0, 120).c_str());
         check(levelsKept && allChanged, "randomize: every mood rewrites the sound; Volume and Output never change", d);
         check(lockOk && bMoved, "randomize: Lock A and Lock Skin keep their sections, the rest moves");
-        check(skins.size() >= 2, "randomize: picks skins (unless locked)", std::to_string(skins.size()) + " different skins in 14 randomizes (2 per mood)");
+        check(skins.size() >= 2, "randomize: picks skins (unless locked)", std::to_string(skins.size()) + " different skins in 16 randomizes (2 per mood)");
         check(undoDiff == 0, "undo: restores every sound setting and the skin exactly", std::to_string(undoDiff) + " differ");
         const double ambS = std::atof(ambRel.c_str()) * (ambRel.find(" s") != std::string::npos ? 1000 : 1), keyA = std::atof(keyAtt.c_str());
         check(ambS >= 5000 && keyA <= 10.0, "randomize: moods have their character (Ambient release >= 5 s, Keys attack <= 10 ms)", d);
@@ -472,7 +472,7 @@ int main(int argc, char** argv)
     // ---- 8. save: name with the letter keys, category, listed, reloads after a restart; browser ------------------
     {
         Plug p; p.open();
-        p.set("Category", 4.0f / 6.0f); p.tap("Randomize"); p.run(0.1);              // last randomize: Lo-Fi
+        p.set("Category", 4.0f / 7.0f); p.tap("Randomize"); p.run(0.1);              // last randomize: Lo-Fi
         const float cut = p.getN("A Cutoff");
         p.set("Skin", 2.0f / 3.0f);                                                   // saved with the preset: Monolith
         p.tap("Save"); p.run(0.1);
@@ -483,17 +483,17 @@ int main(int argc, char** argv)
         const std::string typed = p.text("Name");
         p.tap("Confirm"); p.run(0.05); std::this_thread::sleep_for(std::chrono::milliseconds(300)); p.run(0.3);
         const std::string status = p.text("Status");
-        const int user0 = 4 * 12 + 4;                                                     // Lo-Fi, first user slot
+        const int user0 = 4 * 16 + 8;                                                     // Lo-Fi, first user slot
         const std::string listed = p.progName(user0);
         p.close();
         Plug q; q.open();                                                               // "restart"
         const std::string again = q.progName(user0);
         q.call(effSetProgram, 0, user0); q.run(0.05);
         const float cut2 = q.getN("A Cutoff");
-        // the browser: category Lo-Fi, slot 5 shows it, Load selects it
-        q.set("Browse", 4.0f / 6.0f); q.set("Browse Slot", 4.0f / 11.0f); q.run(0.05);
+        // the list: from another preset, category Lo-Fi, then a tap on row 9 loads the saved one
+        q.call(effSetProgram, 0, 0); q.run(0.05); q.set("Skin", 0.0f);
+        q.set("Browse", 4.0f / 7.0f); q.run(0.05); q.set("Browse Slot", 8.0f / 16.0f); q.run(0.1);
         const std::string shown = q.text("Browse Slot");
-        q.call(effSetProgram, 0, 0); q.run(0.05); q.set("Skin", 0.0f); q.tap("Load"); q.run(0.1);
         const float cut3 = q.getN("A Cutoff");
         const std::string skinBack = q.text("Skin");
         q.call(effSetProgram, 0, 8); q.run(0.05);
@@ -572,17 +572,17 @@ int main(int argc, char** argv)
         for (int w = 0; w < 5; ++w) { Plug p; p.open(); p.set("A1 Wave", w / 5.0f); p.set("A Cutoff", 1.0f); p.set("A Env Amt", 0.5f); std::vector<float> L, R; phrase(p, L, R); p.close(); judge(std::string("wave_") + waves[w], L, R, false); }
         const char* filters[5] = {"lp24", "lp12", "bp", "hp", "notch"};
         for (int f = 0; f < 5; ++f) { Plug p; p.open(); p.set("A Filter", f / 4.0f); p.set("A Reso", 0.5f); std::vector<float> L, R; phrase(p, L, R); p.close(); judge(std::string("filter_") + filters[f], L, R, false); }
-        const char* moods[7] = {"ambient", "pads_winds", "keys_plucks", "leads_basses", "lofi_psych", "industrial", "noise_chaos"};
-        for (int c = 0; c < 7; ++c)
+        const char* moods[8] = {"ambient", "pads_winds", "keys_plucks", "leads_basses", "lofi_psych", "industrial", "noise_chaos", "funk"};
+        for (int c = 0; c < 8; ++c)
             for (int k = 0; k < 3; ++k)
             {
-                Plug p; p.open(); p.set("Category", c / 6.0f); for (int j = 0; j <= k; ++j) p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(60)); p.run(0.05);   // the new shapes are built
+                Plug p; p.open(); p.set("Category", c / 7.0f); for (int j = 0; j <= k; ++j) p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(60)); p.run(0.05);   // the new shapes are built
                 const bool cr = p.getN("Grit") >= kGritHold;
                 std::vector<float> L, R; phrase(p, L, R); p.close();
                 judge(std::string("mood_") + moods[c] + "_" + std::to_string(k + 1), L, R, cr);
             }
-        for (int prog = 0; prog < 84; prog += 12)
-            for (int s = 0; s < 4; ++s) { Plug p; p.open(prog + s); const bool cr = p.getN("Grit") >= kGritHold; std::vector<float> L, R; phrase(p, L, R); const std::string pname = p.progName(prog + s); judge("preset_" + pname, L, R, cr); p.close();
+        for (int prog = 0; prog < 128; prog += 16)
+            for (int s = 0; s < 8; ++s) { Plug p; p.open(prog + s); const bool cr = p.getN("Grit") >= kGritHold; std::vector<float> L, R; phrase(p, L, R); const std::string pname = p.progName(prog + s); judge("preset_" + pname, L, R, cr); p.close();
                 const double lv = dB(rms(L, 0, (size_t)(2.6 * SR))); if (lv < -36 || lv > -15) { char lb[96]; std::snprintf(lb, sizeof lb, "level of %s (%.1f dBFS), ", pname.c_str(), lv); bad += lb; } }
         check(bad.empty(), "renders: every waveform, filter type, mood and factory preset sounds, no clicks, no runaway (" + std::to_string(n) + " files)", bad.empty() ? "" : "problems: " + bad);
     }
@@ -623,7 +623,7 @@ int main(int argc, char** argv)
                     p.render(0.01, ev);
                     break;
                 }
-                case 11: for (int k = 0; k < 84; ++k) { p.call(effSetProgram, 0, k); p.run(0.003); } p.call(effSetProgram, 0, 4); break;
+                case 11: for (int k = 0; k < 128; ++k) { p.call(effSetProgram, 0, k); p.run(0.003); } p.call(effSetProgram, 0, 8); break;
                 case 12: { float l[128], r[128]; for (int i = 0; i < 128; ++i) l[i] = r[i] = NAN; float* io[2] = {l, r}; p.e->processReplacing(p.e, io, io, 128); break; }
             }
             std::vector<float> L, R;
@@ -776,7 +776,7 @@ int main(int argc, char** argv)
             void* ptr = nullptr; const VstIntPtr len = p.call(effGetChunk, 0, 0, &ptr); std::vector<char> chunk((char*)ptr, (char*)ptr + len);
             // randomize: the drawing and Draw Mix stay
             const std::string mixBefore = p.text("A Draw Mix");
-            p.set("Category", 5 / 6.0f); p.tap("Randomize"); p.run(0.1);
+            p.set("Category", 5 / 7.0f); p.tap("Randomize"); p.run(0.1);
             float moved = 0; for (int k = 0; k < 64; ++k) moved = std::fmax(moved, std::fabs(pt(p, 'A', k) - pts[k]));
             const std::string mixAfter = p.text("A Draw Mix");
             p.tap("Undo"); p.run(0.1);
@@ -784,12 +784,12 @@ int main(int argc, char** argv)
             p.tap("Save"); p.tap("Confirm"); p.run(0.05); std::this_thread::sleep_for(std::chrono::milliseconds(300)); p.run(0.1);
             const std::string saved = p.text("Status");
             p.close();
-            Plug q; q.open(); q.call(effSetChunk, 0, (VstIntPtr)chunk.size(), chunk.data()); q.call(effSetProgram, 0, 4); q.run(0.05);
+            Plug q; q.open(); q.call(effSetChunk, 0, (VstIntPtr)chunk.size(), chunk.data()); q.call(effSetProgram, 0, 8); q.run(0.05);
             float chunkErr = 0; for (int k = 0; k < 64; ++k) chunkErr = std::fmax(chunkErr, std::fabs(pt(q, 'A', k) - pts[k]));
             const std::string fold = q.text("A Fold"), start = q.text("A Start From"), wave = q.text("A1 Wave");
             q.close();
             Plug r; r.open();                                                           // "restart": the user preset from the file
-            int prog = -1; for (int i = 0; i < 84 && prog < 0; ++i) if (r.progName(i) == saved.substr(saved.find(':') + 2)) prog = i;
+            int prog = -1; for (int i = 0; i < 128 && prog < 0; ++i) if (r.progName(i) == saved.substr(saved.find(':') + 2)) prog = i;
             float presetErr = 9;
             if (prog >= 0) { r.call(effSetProgram, 0, prog); r.run(0.05); presetErr = 0; for (int k = 0; k < 64; ++k) presetErr = std::fmax(presetErr, std::fabs(pt(r, 'A', k) - pts[k])); }
             r.close();
@@ -816,7 +816,7 @@ int main(int argc, char** argv)
             }
             g_main = newMain;
             Plug p; p.open();
-            int prog = -1; for (int i = 0; i < 84 && prog < 0; ++i) if (p.progName(i) == oldName) prog = i;
+            int prog = -1; for (int i = 0; i < 128 && prog < 0; ++i) if (p.progName(i) == oldName) prog = i;
             float cut = -2; std::string fold;
             if (prog >= 0) { p.call(effSetProgram, 0, prog); p.run(0.05); cut = p.getN("A Cutoff"); fold = p.text("A Fold"); }
             p.close();
@@ -836,41 +836,35 @@ int main(int argc, char** argv)
                 p.close();
             }
         }
-    }    // ---- 15. the preset drop-down, and the list in the skin kept up to date -----------------------------------
+    }    // ---- 15. the PRESET page's list: a tap on a row loads; the list follows other loads -------------------------
     {
-        Plug ref; ref.open(); ref.call(effSetProgram, 0, 13); ref.run(0.05); const float want = ref.getN("A Cutoff"); const std::string wantName = ref.progName(13); ref.close();
+        auto row = [](Plug& p, int k) { char n[16]; std::snprintf(n, sizeof n, "Slot %02d", k + 1); return p.text(n); };
+        Plug ref; ref.open(); ref.call(effSetProgram, 0, 17); ref.run(0.05); const float want = ref.getN("A Cutoff"); const std::string wantName = ref.progName(17); ref.close();
         Plug p; p.open(); p.run(0.05);
-        p.set("Preset", 13 / 83.0f); p.run(0.1);                                   // PAD Warm Choir
-        const float got = p.getN("A Cutoff"); const std::string st = p.text("Status"), shown = p.text("Preset");
-        p.call(effSetProgram, 0, 30); p.run(0.1);
-        const std::string follow = p.text("Preset"); const float followN = p.getN("Preset");
+        p.set("Browse", 1 / 7.0f); p.run(0.05);                                       // Pads & Winds
+        const std::string slotNone = p.text("Browse Slot"), row2 = row(p, 1);
+        p.set("Browse Slot", 1 / 16.0f); p.run(0.1);                                   // tap row 2: PAD Warm Choir
+        const float got = p.getN("A Cutoff"); const std::string st = p.text("Status"), marked = row(p, 1);
+        p.call(effSetProgram, 0, 7 * 16 + 2); p.run(0.1);                              // the MPC loads FUNK Clav Strut
+        const std::string followCat = p.text("Browse"), followRow = row(p, 2);
         const float before = p.getN("A Cutoff");
-        p.set("Preset", 11 / 83.0f); p.run(0.1);                                   // AMB user slot 8: empty
+        p.set("Browse Slot", 12 / 16.0f); p.run(0.1);                                  // a Funk user slot: empty
         const std::string emptySt = p.text("Status"); const float after = p.getN("A Cutoff");
         p.close();
-        char d3[400]; std::snprintf(d3, sizeof d3, "pick #14 -> cutoff %.3f (preset has %.3f), status '%s', shows '%s'; host loads #31 -> drop-down shows '%s' (%.3f); empty slot -> '%s', sound kept %s",
-                                    got, want, st.c_str(), shown.c_str(), follow.c_str(), followN, emptySt.c_str(), after == before ? "yes" : "NO");
-        check(std::fabs(got - want) < 1e-6f && st == "Loaded: " + wantName && shown == wantName && std::fabs(followN - 30 / 83.0f) < 1e-4f &&
-              emptySt == "That slot is empty" && after == before, "preset drop-down: picking loads, it follows other loads, empty slots are refused", d3);
-        // the skin's list (a copy of the real TUI.json in the plugin folder): the saved preset of test 8 is listed
-        std::string savedName;
-        {   // save a preset now (Lo-Fi), then read the skin's list
-            Plug q; q.open(); q.set("Category", 4 / 6.0f); q.tap("Randomize"); q.run(0.1);
-            q.tap("Save"); q.tap("Confirm"); q.run(0.05); std::this_thread::sleep_for(std::chrono::milliseconds(400)); q.run(0.1);
-            savedName = q.text("Status"); savedName = savedName.substr(savedName.find(':') + 2);
-            q.close();
-        }
-        const std::string skin = std::string(argv[2]) + "/Plugin Skins/TUI.json";
-        std::vector<char> raw; if (FILE* fp = std::fopen(skin.c_str(), "rb")) { char b[65536]; size_t n; while ((n = std::fread(b, 1, sizeof b, fp)) > 0) raw.insert(raw.end(), b, b + n); std::fclose(fp); }
-        const std::string j(raw.begin(), raw.end());
-        const size_t k = j.find("\"Parameter 377\""), open = j.find('[', k), close = j.find(']', open);
-        const std::string list = k == std::string::npos ? "" : j.substr(open, close - open + 1);
-        const size_t moth = list.find("\"" + savedName + "\""), lofi1 = list.find("\"LOFI Moth Light\"");
-        std::snprintf(d3, sizeof d3, "skin file %s, list %zu chars; just saved '%s': %s (right after the Lo-Fi factory presets: %s); 'AMB empty 1' %s",
-                      raw.empty() ? "MISSING" : "found", list.size(), savedName.c_str(), moth != std::string::npos ? "listed" : "NOT listed", moth > lofi1 && moth - lofi1 < 24 ? "yes" : "no",
-                      list.find("\"AMB empty 1\"") != std::string::npos ? "listed" : "NOT listed");
-        check(!raw.empty() && moth != std::string::npos && moth > lofi1 && list.find("\"AMB empty 1\"") != std::string::npos,
-              "the drop-down's list in the skin is rewritten with saved preset names", d3);
+        char d3[500]; std::snprintf(d3, sizeof d3, "new category -> slot '%s', row 2 '%s'; tap row 2 -> cutoff %.3f (preset %.3f), '%s', row shows '%s'; MPC loads Funk #3 -> list on '%s', row 3 '%s'; empty row -> '%s', sound kept %s",
+                                    slotNone.c_str(), row2.c_str(), got, want, st.c_str(), marked.c_str(), followCat.c_str(), followRow.c_str(), emptySt.c_str(), after == before ? "yes" : "NO");
+        check(slotNone == "-" && std::fabs(got - want) < 1e-6f && st == "Loaded: " + wantName && marked.rfind("> 2", 0) == 0 && marked.find("Warm Choir") != std::string::npos &&
+              followCat == "Funk" && followRow.rfind("> 3", 0) == 0 && followRow.find("Clav Strut") != std::string::npos && emptySt == "That slot is empty" && after == before,
+              "preset list: a tap loads, the loaded row is marked, the list follows other loads, empty rows are refused", d3);
+        // a saved preset appears in its category's list at once
+        Plug q; q.open(); q.set("Category", 7 / 7.0f); q.tap("Randomize"); q.run(0.1);
+        q.tap("Save"); q.tap("Confirm"); q.run(0.05); std::this_thread::sleep_for(std::chrono::milliseconds(400)); q.run(0.1);
+        std::string saved = q.text("Status"); saved = saved.substr(saved.find(':') + 2);
+        q.set("Browse", 7 / 7.0f); q.run(0.05);
+        std::string listed; for (int k = 8; k < 16; ++k) if (row(q, k).find(saved.substr(saved.find(' ') + 1)) != std::string::npos) listed = row(q, k);
+        q.close();
+        std::snprintf(d3, sizeof d3, "saved '%s' -> listed as '%s'", saved.c_str(), listed.c_str());
+        check(!listed.empty(), "a saved preset appears in the list right away", d3);
     }
     std::printf("\nper-control list:\n"); for (const auto& s : g_controlList) std::printf("  %s\n", s.c_str());
     std::printf("\n%d passed, %d failure(s)\n", g_pass, g_fail);

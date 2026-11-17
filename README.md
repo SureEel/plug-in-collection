@@ -17,6 +17,8 @@ More plugins are on the way.
 
 ## Elver
 
+<img src="docs/images/elver-icon.png" alt="Elver icon" width="128" align="right">
+
 A clean, simple, low-memory synthesizer. It has two sides, **A** and **B**. Each has three oscillators
 (with unison), its own filter (24 dB LP, 12 dB LP, band-pass, high-pass, notch) and its own amp and
 filter envelopes. An **XY pad** blends A into B and sweeps cutoff, morph, resonance or drive. Two LFOs,
@@ -28,9 +30,11 @@ slow drift, drive, bit-crush grit and ring modulation round it out.
 - Then sculpt it with Bright, Odd/Even, Formant, Fold, Bend, Sync and a seeded Mutate.
 - The wave is band-limited, so high notes don't alias, and changes crossfade without clicks.
 
-**Randomize** builds a new sound in one of seven moods, from calmest to noisiest: Ambient, Pads & Winds,
-Keys & Plucks, Leads & Basses, Lo-Fi Psych, Industrial, Noise & Chaos. It has an amount control, Undo
-and section locks. Presets are organised by the same seven categories (4 factory and 8 user slots each).
+**Randomize** builds a new sound in one of eight categories: seven moods from calmest to noisiest (Ambient,
+Pads & Winds, Keys & Plucks, Leads & Basses, Lo-Fi Psych, Industrial, Noise & Chaos) plus **Funk**. It has an
+amount control, Undo and section locks. Presets are organised by the same categories (8 factory and 8 user
+slots each, 64 factory presets in all). Funk's are set by hand, inspired by Minneapolis-sound brass stabs,
+James Brown horn hits and clavinet, prog-rock leads and organ, and early disco strings and octave bass.
 You name a preset on an on-screen letter grid.
 
 There are four panel skins: Neon Rain, Capsule Red, Monolith and Derelict. Elver shows its own CPU load
@@ -41,13 +45,13 @@ and the voices playing.
 ![Elver DRAW page](docs/images/elver-draw.png)
 
 *The MAIN page and a DRAW page with a hand-drawn wave, rendered from the plugin's own skin files with
-real values (fonts are approximate). 13 pages in all: MAIN, OSC, SHAPE and DRAW for each side, TUNE,
-FILTER, ENV, MOD, PRESET and SAVE.*
+real values (fonts are approximate). 14 pages in all: MAIN, OSC, SHAPE and DRAW for each side, TUNE,
+FILTER, ENV, MOD, PRESET, RANDOM and SAVE.*
 
 ### Install
 
 Download **`elver-...-force-armv7.zip`** (32-bit, Akai Force) or **`elver-...-mpc-aarch64.zip`** (64-bit,
-MPC Key 37 Gen 2) from the [Elver release](https://github.com/SureEel/plug-in-collection/releases/tag/elver-v1.1.1).
+MPC Key 37 Gen 2) from the [Elver release](https://github.com/SureEel/plug-in-collection/releases/tag/elver-v1.2.0).
 Copy the folder **`sureeel - VST - Elver`** into **`VST2 Plugins`**, switch on the two Enhancements
 settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load it on a plugin track.
 
@@ -60,7 +64,8 @@ settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load i
   library wave; the scope shows the cycle.
 - **DRAW A / DRAW B:** paint the wave on the pad. **Draw Mix** blends it with the start wave.
   **Copy Start**, **Clear** and **Undo** are the editing tools.
-- **PRESET / SAVE:** tap the Preset box for a list of all presets; picking one loads it. To save, type a name, choose a category, then Confirm.
+- **PRESET:** tap a category, then tap a preset in the list to load it (the loaded one is marked >).
+- **SAVE:** type a name, choose a category, then Confirm. **RANDOM:** Category, Randomize, Rand Amount, Undo and the locks.
 - Volume, Output and the skin are global: loading a preset never changes your levels.
 
 Touch any control's name to see what it does. Details: [plugins/Elver/README.md](plugins/Elver/README.md).
