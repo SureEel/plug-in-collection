@@ -1,0 +1,17 @@
+{
+  "name": "Hydra Eel",
+  "manufacturer": "sureeel",
+  "version": "1.0.0",
+  "format": "vst2",
+  "kind": "effect",
+  "uid": "SpPe",
+  "numInputs": 2,
+  "numOutputs": 2,
+  "category": "Effect",
+  "file32": "VST/hydra-eel-arm32.so",
+  "file64": "VST/hydra-eel-arm64.so",
+  "description": "Spaghetti western guitar rig: compressors and fuzzes, tremolo/vibrato or rotary/phaser, digital or analog delay, plate, spring or shimmer reverb.",
+  "author": "Sure Eel",
+  "url": "https://github.com/SureEel/plug-in-collection",
+  "license": "MIT"
+}

@@ -7,6 +7,7 @@ manufacturer **sureeel**).
 | Plugin | What it is |
 |---|---|
 | [Elver](#elver) | Two-sided synthesizer with a wave shaper you draw with your finger, an XY pad and a mood randomizer |
+| [Hydra Eel](#hydra-eel) | Spaghetti western guitar rig: compressors and fuzzes, tremolo / vibrato or rotary / phaser, delay, plate, spring or shimmer reverb |
 | [LUFS Master](#lufs-master) | Loudness meter, leveler and true-peak limiter: measure a pass, auto-set the gain, land on target |
 | [Sleepy Android](#sleepy-android) | Guitar envelope filter (after the Mutronics Mutator) plus a random capture-and-loop stutter |
 
@@ -63,6 +64,43 @@ settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load i
 - Volume, Output and the skin are global: loading a preset never changes your levels.
 
 Touch any control's name to see what it does. Details: [plugins/Elver/README.md](plugins/Elver/README.md).
+
+---
+
+## Hydra Eel
+
+A spaghetti western guitar rig in the spirit of Morricone: twangy tremolo, spring reverb and gritty
+fuzz, plus compressors for funk and jazz. The signal runs **Drive** > **Mod** > **Delay** > **Reverb** >
+mono / stereo > output, with a -1 dBFS safety limiter. Each section has its own On switch, crossfades
+without clicks, and costs nothing when off.
+
+![Hydra Eel DRIVE page](docs/images/hydra-eel-drive.png)
+
+*The DRIVE page, rendered from the plugin's own skin files with real readouts (fonts are approximate).
+Five pages: MAIN, DRIVE, MOD, DELAY and REVERB.*
+
+### Install
+
+Download **`hydra-eel-...-force-armv7.zip`** (32-bit, Akai Force) or **`hydra-eel-...-mpc-aarch64.zip`**
+(64-bit, MPC Key 37 Gen 2) from the
+[Hydra Eel release](https://github.com/SureEel/plug-in-collection/releases/tag/hydra-eel-v1.0.0).
+Copy the folder **`sureeel - VST - Hydra Eel`** into **`VST2 Plugins`**, switch on the two
+Enhancements settings (MPC OS / Force OS 3.10.1+) and restart. Insert it on a guitar track or input.
+
+### Controls
+
+| Page | Controls |
+|---|---|
+| MAIN | Input, Output (global: presets never change them), Bypass, mono / stereo; Randomize, Undo, Rand Amount; Save Preset with naming |
+| DRIVE | Drive type, cleanest to dirtiest. **Compressors:** opto, smooth, fet, punch. **Fuzzes:** germanium, gated, sustain, octave. Then Amount, Tone, Level, **Gate Bias** (gate on the compressors, "starve" on the fuzzes) and Drive Mix |
+| MOD | trem / vib or rotary / phaser, Blend, Wave, Rate (Hz or tempo sync), Depth, rotor slow / fast |
+| DELAY | digital or analog (darker, a little wobble), ms or tempo-synced Time, Feedback, Mix |
+| REVERB | plate, spring or shimmer; Decay, Tone, Mix |
+
+Touch any name or meter for help. Factory presets include **Lonesome Trail**, **Showdown**,
+**Ennio Twang**, **Ghost Town** and **Octave Outlaw**, plus **Funk Chicken** and **Jazz Box** on the
+compressors. The compressor and fuzz positions are inspired by classic units' behaviour; they are
+not circuit models. Details: [plugins/Hydra Eel/README.md](plugins/Hydra%20Eel/README.md).
 
 ---
 
@@ -181,6 +219,7 @@ Python 3 (Windows, macOS or Linux); the first build downloads a compiler into `.
 python tools/build.py "plugins/LUFS Master"
 python tools/build.py "plugins/Sleepy Android"
 python tools/build.py "plugins/Elver"
+python tools/build.py "plugins/Hydra Eel"
 ```
 
 The finished plugin folders appear in `plugins/<name>/build/`. The touch panels are generated
@@ -205,6 +244,7 @@ SDK itself.
   - Sleepy Android's `skin_src/reference/`, `skin_src/assets/bg_logo.png` and
     `skin_src/assets/logo_96.png`;
   - Elver's `skin_src/reference/`;
-  - the page backgrounds generated from them, including Elver's `skins/elver_panel.png`.
-- Sleepy Android's and Elver's button labels are rendered with the Bahnschrift font that ships with
+  - Hydra Eel's `skin_src/reference/`, `skin_src/assets/bg_hydra.png` and `skin_src/assets/hydra_logo.png`;
+  - the page backgrounds generated from them, including Elver's `skins/elver_panel.png` and Hydra Eel's `skins/panel_*.png`.
+- Sleepy Android's, Elver's and Hydra Eel's button labels are rendered with the Bahnschrift font that ships with
   Windows.

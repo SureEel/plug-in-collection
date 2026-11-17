@@ -1,0 +1,210 @@
+{
+  "kit": "mono",
+  "pages": [
+    {
+      "name": "MAIN",
+      "controls": [
+        {
+          "param": "Input",
+          "widget": "knob"
+        },
+        {
+          "param": "Randomize",
+          "widget": "switch"
+        },
+        {
+          "param": "Save",
+          "widget": "switch"
+        },
+        {
+          "param": "Name Pos",
+          "widget": "knob"
+        },
+        {
+          "param": "Output",
+          "widget": "knob"
+        },
+        {
+          "param": "Undo",
+          "widget": "switch"
+        },
+        {
+          "param": "Confirm",
+          "widget": "switch"
+        },
+        {
+          "param": "Letter",
+          "widget": "knob"
+        },
+        {
+          "param": "Bypass",
+          "widget": "switch"
+        },
+        {
+          "param": "Rand Amount",
+          "widget": "knob"
+        },
+        {
+          "param": "Cancel",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Stereo",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "DRIVE",
+      "controls": [
+        {
+          "param": "Drive On",
+          "widget": "switch"
+        },
+        {
+          "param": "Amount",
+          "widget": "knob"
+        },
+        {
+          "param": "Drive Mix",
+          "widget": "knob"
+        },
+        "empty",
+        {
+          "param": "Drive Type",
+          "widget": "knob"
+        },
+        {
+          "param": "Tone",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "Level",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "Gate Bias",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "MOD",
+      "controls": [
+        {
+          "param": "Mod On",
+          "widget": "switch"
+        },
+        {
+          "param": "Rate",
+          "widget": "knob"
+        },
+        {
+          "param": "Rate Mode",
+          "widget": "switch"
+        },
+        "empty",
+        {
+          "param": "Mod Mode",
+          "widget": "switch"
+        },
+        {
+          "param": "Depth",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Blend",
+          "widget": "knob"
+        },
+        {
+          "param": "Rotor",
+          "widget": "switch"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Wave",
+          "widget": "switch"
+        }
+      ]
+    },
+    {
+      "name": "DELAY",
+      "controls": [
+        {
+          "param": "Delay On",
+          "widget": "switch"
+        },
+        {
+          "param": "Time",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Delay Type",
+          "widget": "switch"
+        },
+        {
+          "param": "Feedback",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Sync",
+          "widget": "switch"
+        },
+        {
+          "param": "Delay Mix",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "REVERB",
+      "controls": [
+        {
+          "param": "Reverb On",
+          "widget": "switch"
+        },
+        {
+          "param": "Decay",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        {
+          "param": "Reverb Type",
+          "widget": "switch"
+        },
+        {
+          "param": "Rev Tone",
+          "widget": "knob"
+        },
+        "empty",
+        "empty",
+        "empty",
+        {
+          "param": "Reverb Mix",
+          "widget": "knob"
+        }
+      ]
+    }
+  ],
+  "style": {
+    "background": "ff6e3214",
+    "text": "ff89cff0",
+    "muted": "ff6aa6c4",
+    "accent": "ff89cff0"
+  }
+}
