@@ -133,6 +133,9 @@ struct StereoFilter
     Svf s1[2], s2[2];
     SvfCoef c1, c2;
     void reset() { for (int c = 0; c < 2; ++c) { s1[c].reset(); s2[c].reset(); } }
+    // while only the left channel is processed (a mono sound), the right one follows it, so stereo
+    // processing can resume without a jump
+    void syncRight() { s1[1] = s1[0]; s2[1] = s2[0]; }
     void set(int type, float hz, float res01, double sr)
     {
         c2.set(hz, res01, sr);

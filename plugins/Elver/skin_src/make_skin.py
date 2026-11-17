@@ -120,9 +120,9 @@ PAGES = [
         ("global", ["Volume", "Output", "Voices", "Skin"]),
     ]),
     ("PRESET", [
-        ("browse " + SEP + " category", ["Browse", MORE, MORE, "Load"]),
-        ("preset", ["Preset", ("status", "Status", "status"), None, None]),
-        ("randomize", ["Rand Amount", "Undo", "Lock Mod", "Lock Skin"]),
+        ("preset " + SEP + " tap to choose", ["Preset", ("status", "Status", "status"), None, None]),
+        ("randomize", ["Category", MORE, MORE, "Randomize"]),
+        ("amount " + SEP + " undo", ["Rand Amount", "Undo", "Lock Mod", "Lock Skin"]),
         ("locks", ["Lock A", "Lock B", "Lock Filter", "Lock Env"]),
     ]),
     ("SAVE", [
@@ -132,6 +132,7 @@ PAGES = [
         ("save in", ["Save In", MORE, MORE, ("status", "Status", "status")]),
     ]),
 ]
+MENUS = {"Preset"}                      # a drop-down: tap opens the full list (menu overlay)
 TOGGLES = {"Lock A", "Lock B", "Lock Filter", "Lock Env", "Lock Mod", "Lock Skin"}
 WAVES = ["sine", "tri", "saw", "sqr", "noise", "shape"]
 SELECTORS = {"Pad Y To": ["cutoff", "morph", "reso", "drive"], "Routing": ["parallel", "series"],
@@ -495,6 +496,17 @@ def selector_def(name, caps, w, h, cols, height):
     return G.component_definition([G.action("Mouse Down", "Q-Link", "Data", "")], kids, "00000000")
 
 
+def menu_def():
+    """A drop-down: the name, the current choice in large type and a hint; one tap opens the full list."""
+    kids = [focus(CTL_W, CTL_H),
+            label("name", "12 4 200 26", "Name", "Data", name_style()),
+            label("hint", "150 4 126 26", "Text", None, ts(14, MUTED, HEAD_FONT, "Light", "right verticallyCentred"), "tap for list"),
+            label("value", "12 34 270 48", "Value", "Data", ts(24, TEXT))]
+    acts = [G.action("Mouse Down", "Show Overlay", "Data", "menu overlay"),
+            G.action("Enter Pressed", "Show Overlay", "Data", "menu overlay")]
+    return G.component_definition(acts, kids, "00000000")
+
+
 def toggle_def():
     kids = [focus(CTL_W, CTL_H),
             label("name", "12 8 190 30", "Name", "Data", name_style()),
@@ -519,6 +531,23 @@ def key_def(i):
 
 def slot(name, comp, bounds, p, focusable="Yes"):
     return G.entry(name, comp, obj(("version", 1), ("handleName", "Data")), bounds, focusable, "Hide", "Always", remap=[("Data", p.handle)])
+
+
+def preset_names():
+    """The drop-down's list as Elver starts it: factory names, then empty user slots. Taken from
+    src/Elver.cpp so the two never drift apart. Elver rewrites this list in the installed skin with
+    the saved user presets' names (at start-up and after every save)."""
+    import re
+    src = open(os.path.join(PROJECT, "src", "Elver.cpp"), encoding="utf-8").read()
+    tags = re.findall(r'"([A-Z]+)"', re.search(r"kCatTags\[kCats\] = \{([^}]*)\}", src).group(1))
+    block = re.search(r"kFactoryNames\[kCats\]\[kFactoryPer\] = \{(.*?)\n\};", src, re.S).group(1)
+    factory = re.findall(r'"([^"]+)"', block)
+    assert len(tags) == 7 and len(factory) == 28, (tags, factory)
+    names = []
+    for c, tag in enumerate(tags):
+        names += ["%s %s" % (tag, n) for n in factory[c * 4:c * 4 + 4]]
+        names += ["%s empty %d" % (tag, u + 1) for u in range(8)]
+    return names
 
 
 def find(o, key):
@@ -610,8 +639,8 @@ def build_tab(page_name, sections, by_name, help1, help2):
                 comp, hx = "sel_" + slug(row), (x + 12, y + 2, 126, 30)
             elif row in ACTIONS:
                 comp, hx = "act_" + slug(row), (x + 12, y + 2, 270, 28)
-            elif row == "Preset":
-                comp, hx = "knobName", (x + 78, y + 6, 200, 32)
+            elif row in MENUS:
+                comp, hx = "menuC", (x + 12, y + 2, 270, 28)
             else:
                 comp, hx = "knobC", (x + 78, y + 6, 200, 32)
             kids.append(slot(row, comp, "%d %d %d %d" % (x, y, CTL_W, h), p))
@@ -653,6 +682,8 @@ def write_ui_json():
                     row = rows[r]
                 if row is None or row == MORE or isinstance(row, tuple):
                     controls.append("empty")
+                elif row in MENUS:
+                    controls.append({"param": row, "widget": "slider", "overlay": "menu"})   # -> menu overlay + its list
                 elif row in TOGGLES or row in ACTIONS or (row in SELECTORS and len(SELECTORS[row]) <= 4):   # (wider selectors: listed as knobs; the page is ours)
                     controls.append({"param": row, "widget": "switch"})
                 else:
@@ -682,6 +713,7 @@ def main():
     defs = find(find(page_data, "componentDefinitions"), "localComponentDefinitions")
     defs.append(obj(("key", "knobC"), ("value", knob_def("elver_knob_small_uni.png"))))
     defs.append(obj(("key", "knobName"), ("value", knob_def("elver_knob_small_uni.png", 19))))
+    defs.append(obj(("key", "menuC"), ("value", menu_def())))
     defs.append(obj(("key", "toggleC"), ("value", toggle_def())))
     for name, caps in SELECTORS.items():
         defs.append(obj(("key", "sel_" + slug(name)), ("value", selector_def(name, caps, SEG_W[len(caps)], SEG_H, len(caps), CTL_H))))
@@ -692,6 +724,10 @@ def main():
     for i in range(len(KEY_CAPS)):
         defs.append(obj(("key", "key_%d" % i), ("value", key_def(i))))
 
+    # the preset drop-down's list (84 entries: more than the parameter dump can discover by itself)
+    reps = find(page_data, "replacementStrings")
+    reps[:] = [r for r in reps if find(r, "key") != by_name["Preset"].handle]
+    reps.append(obj(("key", by_name["Preset"].handle), ("value", preset_names())))
     tabs = find(page_data, "tabs")
     assert [p.name for p in pages] == [n for n, _ in PAGES], "ui.json pages out of step"
     for (name, sections), tab in zip(PAGES, tabs):

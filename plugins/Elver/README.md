@@ -48,7 +48,8 @@ oscillators to the wave **Shape**.
 
   They are computed from recipes, so no sample files are involved.
 - **DRAW page**: drag a finger across the pad to paint the wave. Fast strokes are filled in, so there are
-  no gaps. **Draw Mix** blends the drawing with the start wave; your first stroke turns it up to 100 %.
+  no gaps. Your first stroke makes the drawing heard: if none of that side's oscillators plays Shape,
+  oscillator 1 switches to Shape, and **Draw Mix** (which blends the drawing with the start wave) goes to 100 %.
   **Smooth / Linear / Steps** sets how the 64 drawn points are joined. **Copy Start** copies the start
   wave into the drawing so you can edit it, **Clear** flattens it, and **Undo** removes the last
   stroke (8 steps).
@@ -82,6 +83,9 @@ one. The **locks** (A, B, Filter, Env, Mod, Skin) keep a section as it is. **Und
 Randomize never changes Volume or Output.
 
 ## Presets
+
+On the PRESET page, tap the **Preset** box to open the full list of all 84 presets; picking one loads it.
+The list in the skin is updated with your saved preset names whenever you save (and at start-up).
 
 7 categories × 12 slots: 4 factory presets and 8 user slots each. In the MPC's preset list they appear as
 "AMB Deep Tide", "LEAD Acid Fin", and so on. An empty user slot loads the plain starting sound.

@@ -24,7 +24,7 @@ slow drift, drive, bit-crush grit and ring modulation round it out.
 
 **Shape and drawing:** each side has a Shaper.
 - Start from one of 60 original library waves (analog, vowels, FM bells, organs, digital, harmonic,
-  noise), or **draw your own wave with your finger** on the DRAW page.
+  noise), or **draw your own wave with your finger** on the DRAW page: your first stroke switches oscillator 1 to Shape, so you hear the drawing at once.
 - Then sculpt it with Bright, Odd/Even, Formant, Fold, Bend, Sync and a seeded Mutate.
 - The wave is band-limited, so high notes don't alias, and changes crossfade without clicks.
 
@@ -47,7 +47,7 @@ FILTER, ENV, MOD, PRESET and SAVE.*
 ### Install
 
 Download **`elver-...-force-armv7.zip`** (32-bit, Akai Force) or **`elver-...-mpc-aarch64.zip`** (64-bit,
-MPC Key 37 Gen 2) from the [Elver release](https://github.com/SureEel/plug-in-collection/releases/tag/elver-v1.1.0).
+MPC Key 37 Gen 2) from the [Elver release](https://github.com/SureEel/plug-in-collection/releases/tag/elver-v1.1.1).
 Copy the folder **`sureeel - VST - Elver`** into **`VST2 Plugins`**, switch on the two Enhancements
 settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load it on a plugin track.
 
@@ -60,7 +60,7 @@ settings (MPC OS / Force OS 3.10.1+) and restart. Elver is an instrument: load i
   library wave; the scope shows the cycle.
 - **DRAW A / DRAW B:** paint the wave on the pad. **Draw Mix** blends it with the start wave.
   **Copy Start**, **Clear** and **Undo** are the editing tools.
-- **PRESET / SAVE:** browse by category and Load. To save, type a name, choose a category, then Confirm.
+- **PRESET / SAVE:** tap the Preset box for a list of all presets; picking one loads it. To save, type a name, choose a category, then Confirm.
 - Volume, Output and the skin are global: loading a preset never changes your levels.
 
 Touch any control's name to see what it does. Details: [plugins/Elver/README.md](plugins/Elver/README.md).

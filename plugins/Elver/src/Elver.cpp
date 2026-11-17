@@ -62,16 +62,18 @@ enum ParamIndex
     kKey0,                                       // the letter grid: kNumKeys on/off keys
     kCpu = kKey0 + 42, kVoicesNow, kStatus, kNameEdit, kHelp, kHelp2,
     kShA, kShB = kShA + kShN,                    // 1.1: the two shapers (appended: saved projects keep their order)
-    kNumParams = kShB + kShN
+    kPresetPick = kShB + kShN,                   // 1.1: the PRESET page's drop-down (all 84 presets; picking one loads it)
+    kNumParams
 };
 // "the sound": what presets, randomize and undo cover. The 1.0 block plus each shaper's settings and
 // drawing (not its buttons, the drawing pad's position or the scope).
 constexpr bool isSound(int i)
 {
-    return i < kNumSound || (i >= kShA && i < kNumParams && ((i - kShA) % kShN <= kShSmooth ||
+    return i < kNumSound || (i >= kShA && i < kShB + kShN && ((i - kShA) % kShN <= kShSmooth ||
            ((i - kShA) % kShN >= kShPts && (i - kShA) % kShN < kShScope)));
 }
-constexpr int shOff(int i) { return i >= kShA ? (i - kShA) % kShN : -1; }
+constexpr int shOff(int i) { return i >= kShA && i < kShB + kShN ? (i - kShA) % kShN : -1; }
+static_assert(!isSound(kPresetPick), "the preset drop-down is not part of the sound");
 constexpr int kNumKeys = 42;
 const char kKeyChars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -";   // 38 characters, then 4 editing keys
 enum EditKey { kKeyBack = 38, kKeyLeft, kKeyRight, kKeyClear };
@@ -120,7 +122,7 @@ const char* const kHelpText[][2] = {
     {"Randomize: a new sound in the", "category. Undo goes back."},       // 24
     {"Amount: low nudges, 100 %",     "rerolls."},                        // 25
     {"Locks keep a section as it",    "is when you randomize."},          // 26
-    {"Browse: pick a category, then", "a preset, then Load."},            // 27
+    {"Preset: tap the box and pick",  "from the list: it loads now."},   // 27
     {"Save: type a name, pick a",     "category, Confirm."},              // 28
     {"CPU: Elver's own load per",     "audio block. Voices: playing."},   // 29
     {"Shape: a wave you sculpt. Pick", "Shape as an oscillator's wave."}, // 30
@@ -129,7 +131,7 @@ const char* const kHelpText[][2] = {
     {"Formant: a vocal resonance",    "moving through the harmonics."},   // 33
     {"Fold, Bend (phase distortion)", "and Sync reshape the cycle."},     // 34
     {"Mutate: seeded variation.",     "Same Seed = same wave."},          // 35
-    {"Drag on the pad to draw the",   "wave. Draw Mix blends it in."},    // 36
+    {"Drag to draw: osc 1 plays the",  "drawn wave (Shape) from then."},   // 36
     {"Copy Start: draw over the",     "start wave. Undo: last stroke."},  // 37
     {"The wave the oscillators set",  "to Shape play (one cycle)."},      // 38
 };
@@ -252,7 +254,7 @@ public:
         addParam(mpc::choiceParam("browse_cat", "Browse", cats, 0));
         {
             std::vector<std::string> slots; for (int i = 1; i <= kSlotsPer; ++i) slots.push_back(std::to_string(i));
-            addParam(mpc::choiceParam("browse_slot", "Preset", slots, 0));
+            addParam(mpc::choiceParam("browse_slot", "Browse Slot", slots, 0));
         }
         addParam(mpc::boolParam("load", "Load", false));
         addParam(mpc::boolParam("save", "Save", false));
@@ -315,7 +317,16 @@ public:
                 p.automatable = false; addParam(p);
             }
         }
-        static_assert(kShB + kShN == kNumParams, "parameter list");
+        {   // the drop-down: the list the MPC shows is fixed in the skin, so user slots are listed as
+            // "TAG User n"; the value shown on the page is always the preset's real name
+            std::vector<std::string> names;
+            for (int c = 0; c < kCats; ++c)
+                for (int s = 0; s < kSlotsPer; ++s)
+                    names.push_back(s < kFactoryPer ? std::string(kCatTags[c]) + " " + kFactoryNames[c][s]
+                                                    : std::string(kCatTags[c]) + " User " + std::to_string(s - kFactoryPer + 1));
+            addParam(mpc::choiceParam("preset_pick", "Preset", names, 0));
+        }
+        static_assert(kPresetPick + 1 == kNumParams, "parameter list");
         for (int i = 0; i < kNumParams; ++i) if (isSound(i)) soundList_.push_back(i);
         // shape engine: three table buffers per side (current, fading-out, being built)
         for (int side = 0; side < 2; ++side)
@@ -327,6 +338,7 @@ public:
         if (pf.find(" - VST - ") != std::string::npos) userFile_ = pf.substr(0, pf.find_last_of('/')) + "/.sureeel Elver user presets.bin";
         else userFile_ = (pf.empty() ? std::string(".") : pf) + "/user-presets.bin";
         loadUserPresets();
+        skinFile_ = pf.find(" - VST - ") != std::string::npos ? pf + "/Plugin Skins/TUI.json" : (pf.empty() ? std::string() : pf + "/Plugin Skins/TUI.json");
         rng_.reseed((uint32_t)(reinterpret_cast<uintptr_t>(this) ^ 0xE1FEu) * 2654435761u);
         worker_ = std::thread([this] { writerLoop(); });
     }
@@ -350,14 +362,16 @@ public:
     {
         sr_ = sampleRate;
         envDirty_ = true;
+        crushRel_ = (float)std::exp(-1.0 / (0.2 * sampleRate));            // 200 ms release
         reset();
     }
     void reset() override
     {
         for (Voice& v : voices_) v.reset();
-        lfoPh_[0] = lfoPh_[1] = 0.0f; lfoS_[0] = lfoS_[1] = 0.0f; ampS_ = 1.0f; shL_[0] = shL_[1] = 0.0f; crushHold_ = 0; crushL_ = crushR_ = 0.0f;
-        gBlend_ = get(kBlend) * 0.01f; gVol_ = dbToLin(get(kVolume)) * dbToLin(get(kOutput));
+        lfoPh_[0] = lfoPh_[1] = 0.0f; lfoS_[0] = lfoS_[1] = 0.0f; ampS_ = 1.0f; shL_[0] = shL_[1] = 0.0f; crushHold_ = 0; crushL_ = crushR_ = 0.0f; crushEnv_ = 0.0f;
+        gBlend_ = get(kBlend) * 0.01f; gAprev_ = std::cos(gBlend_ * kPi * 0.5f); gBprev_ = std::sin(gBlend_ * kPi * 0.5f); gVol_ = dbToLin(get(kVolume)) * dbToLin(get(kOutput));
         for (int b = kRandomize; b < kNumParams; ++b) btnLast_[b] = getBool(b);
+        pickLast_ = getInt(kPresetPick);         // (progLast_ is not reset: a load's reset must not hide the new preset number)
         silentHeld_ = 0;
         for (int side = 0; side < 2; ++side)
         {   // the drawing pad's current position is the baseline: a load never "draws"
@@ -413,6 +427,7 @@ public:
             case kVoicesNow: std::snprintf(buf, sizeof buf, "%d / %d", voicesDisp_.load(), limitDisp_.load()); out = buf; return true;
             case kStatus: out = statusText(); return true;
             case kNameEdit: out = nameText(); return true;
+            case kPresetPick: out = programName(clamp((int)std::lround(plain), 0, kCats * kSlotsPer - 1)); return true;
             case kBrowseSlot:
             {
                 const int prog = getInt(kBrowseCat) * kSlotsPer + (int)std::lround(plain);
@@ -440,7 +455,7 @@ private:
         mpc::PluginInfo info;
         info.name = "Elver"; info.vendor = "sureeel";
         info.uniqueId = MPC_FOURCC('S', 'q', 'y', 'C');
-        info.version = 1100; info.isInstrument = true; info.numInputs = 0; info.numOutputs = 2;
+        info.version = 1101; info.isInstrument = true; info.numInputs = 0; info.numOutputs = 2;
         return info;
     }
 
@@ -623,7 +638,11 @@ private:
         gBlend_ += (blendT_ - gBlend_) * std::fmin(1.0f, 0.004f * n);
         const float b = clamp(gBlend_ + blendMod, 0.0f, 1.0f);
         const float gA = std::cos(b * kPi * 0.5f), gB = std::sin(b * kPi * 0.5f);
-        set_[0].on = gA > 1e-4f; set_[1].on = gB > 1e-4f;
+        // the blend gains ramp sample by sample from the last chunk's values (an LFO on Blend never zips);
+        // a side keeps rendering while it fades out
+        const float gA0 = gAprev_, gB0 = gBprev_, dA = (gA - gA0) / (float)n, dB = (gB - gB0) / (float)n;
+        gAprev_ = gA; gBprev_ = gB;
+        set_[0].on = std::fmax(gA, gA0) > 1e-4f; set_[1].on = std::fmax(gB, gB0) > 1e-4f;
         const float cutPad = padDest_ == 0 ? padY_ * 6.0f : 0.0f;          // +-3 octaves
         const float resPad = padDest_ == 2 ? padY_ * 0.8f : 0.0f;
         float tmpL[16], tmpR[16];
@@ -648,11 +667,17 @@ private:
                 const float a0 = s.amp.lvl, a1 = s.amp.advance(n), fe = s.fenv.advance(n);
                 { const float d = (a1 - a0) / (float)n; float a = a0; for (int i = 0; i < n; ++i) { a += d; ampEnv[i] = a; } }
                 envA[side] = a1; envF[side] = fe;
-                if (!st.on) { for (int i = 0; i < n; ++i) { sideL[side][i] = sideR[side][i] = 0.0f; } continue; }
-                // filter coefficients for this chunk
+                // filter coefficients for this chunk - also for a side Blend has switched off: in series
+                // routing its filter keeps running, and stale coefficients would jump when it comes back
                 const float kt = st.keyTrk * (float)(v.note - 60) / 12.0f;
                 const float oct = kt + st.fenvAmt * 6.0f * fe + filtOct + cutPad + drift * 0.5f;
                 s.filt.set(st.ftype, st.cut * std::exp2(oct), clamp(st.res + resPad, 0.0f, 1.0f), sr_);
+                if (!st.on)
+                {   // in parallel routing an unused filter restarts from silence when the side comes back
+                    if (routing_ == 0) s.filt.reset();
+                    for (int i = 0; i < n; ++i) { sideL[side][i] = sideR[side][i] = 0.0f; }
+                    continue;
+                }
                 // oscillators
                 // a side without unison spread is mono: one channel is summed and copied
                 float* accL = sideL[side];
@@ -700,7 +725,10 @@ private:
                 if (!accR) for (int i = 0; i < n; ++i) sideR[side][i] = sideL[side][i];
                 // parallel: each side through its own filter, then its amp envelope
                 if (routing_ == 0 && st.mono)
+                {
                     for (int i = 0; i < n; ++i) sideL[side][i] = sideR[side][i] = s.filt.run(0, st.ftype, sideL[side][i]) * ampEnv[i];
+                    s.filt.syncRight();
+                }
                 else if (routing_ == 0)
                     for (int i = 0; i < n; ++i)
                     {
@@ -713,7 +741,8 @@ private:
             const bool seriesMono = (set_[0].mono || !set_[0].on) && (set_[1].mono || !set_[1].on);
             for (int i = 0; i < n; ++i)
             {
-                float l = sideL[0][i] * gA + sideL[1][i] * gB, r = sideR[0][i] * gA + sideR[1][i] * gB;
+                const float ga = gA0 + dA * (float)(i + 1), gb = gB0 + dB * (float)(i + 1);
+                float l = sideL[0][i] * ga + sideL[1][i] * gb, r = sideR[0][i] * ga + sideR[1][i] * gb;
                 if (routing_ == 1)
                 {   // series: both sides -> A filter -> B filter (one channel when neither side is spread)
                     l = v.s[0].filt.run(0, set_[0].ftype, l); l = v.s[1].filt.run(0, set_[1].ftype, l);
@@ -722,6 +751,7 @@ private:
                 }
                 tmpL[i] += l * vel; tmpR[i] += r * vel;
             }
+            if (routing_ == 1 && seriesMono) { v.s[0].filt.syncRight(); v.s[1].filt.syncRight(); }
             // the voice ends when both amp envelopes are idle
             if (!v.s[0].amp.isActive() && !v.s[1].amp.isActive()) v.reset();
         }
@@ -731,7 +761,9 @@ private:
         // master: drive, grit, volume, soft limit
         const float dg = 1.0f + 9.0f * drive_ * drive_;
         const int hold = grit_ > 0.0f ? 1 + (int)(grit_ * 7.0f) : 1;
-        const float q = grit_ > 0.0f ? std::exp2(13.0f - 8.0f * grit_) : 0.0f;
+        // Grit crushes relative to the signal's own level (a peak follower), so it sounds the same loud or quiet
+        // and never rounds a quiet sound away to silence: 9 bits at a touch of grit, under 3 bits at full
+        const float q = grit_ > 0.0f ? std::exp2(9.0f - 6.5f * grit_) : 0.0f;
         for (int i = 0; i < n; ++i)
         {
             gVol_ += (volT_ - gVol_) * 0.002f;
@@ -740,7 +772,13 @@ private:
             if (drive_ > 0.0f) { l = sclip(l * dg) / std::sqrt(dg) * 1.3f; r = sclip(r * dg) / std::sqrt(dg) * 1.3f; }
             if (grit_ > 0.0f)
             {
-                if (++crushHold_ >= hold) { crushHold_ = 0; crushL_ = std::round(l * q) / q; crushR_ = std::round(r * q) / q; }
+                crushEnv_ = std::fmax(std::fmax(std::fabs(l), std::fabs(r)), crushEnv_ * crushRel_);
+                if (++crushHold_ >= hold)
+                {
+                    crushHold_ = 0;
+                    const float e = std::fmax(crushEnv_, 1e-5f);
+                    crushL_ = std::round(l / e * q) / q * e; crushR_ = std::round(r / e * q) / q * e;
+                }
                 l = crushL_; r = crushR_;
             }
             l *= gVol_; r *= gVol_;
@@ -781,6 +819,21 @@ private:
             else { setProgram(prog); status_ = kStLoaded; loadedProg_ = prog; requestDisplayUpdate(); }
             statusChanged_ = true;
         }
+        // the preset drop-down: a new pick loads that preset; a preset loaded any other way moves the pick
+        if (currentProgram() != progLast_)
+        {
+            progLast_ = currentProgram();
+            if (getInt(kPresetPick) != progLast_) setAndTell(kPresetPick, (float)progLast_);
+            pickLast_ = progLast_;
+        }
+        if (getInt(kPresetPick) != pickLast_)
+        {
+            pickLast_ = getInt(kPresetPick);
+            const int cat = pickLast_ / kSlotsPer, slot = pickLast_ % kSlotsPer;
+            if (slot >= kFactoryPer && !userUsed_[cat][slot - kFactoryPer]) status_ = kStEmpty;
+            else { setProgram(pickLast_); progLast_ = pickLast_; status_ = kStLoaded; loadedProg_ = pickLast_; requestDisplayUpdate(); }
+            statusChanged_ = true;
+        }
         if (acted(kSave)) startNaming();
         if (acted(kConfirm)) { if (naming_) confirmSave(); else startNaming(); }
         if (acted(kCancel) && naming_) { naming_ = false; status_ = kStCancelled; statusChanged_ = true; nameChanged_ = true; }
@@ -795,6 +848,17 @@ private:
     {
         const int p = (side ? kShB : kShA) + kShPts + k;
         if (std::fabs(get(p) - v) > 1e-4f) { set(p, v); notifyHostParameterChanged(p); }
+    }
+    // drawing must be heard: if none of this side's sounding oscillators plays Shape, oscillator 1 is set to
+    // Shape (and given a level if it had none), and Draw Mix goes to 100 %
+    void makeDrawingAudible(int side)
+    {
+        const int b = side ? kShB : kShA, o0 = side ? kB : kA;
+        if (get(b + kShDrawMix) <= 0.0f) setAndTell(b + kShDrawMix, 100.0f);
+        for (int o = 0; o < 3; ++o)
+            if (getInt(o0 + kO + o * 6) == kShape && get(o0 + kO + o * 6 + 1) > 0.0f) return;
+        setAndTell(o0 + kO, (float)kShape);
+        if (get(o0 + kO + 1) <= 0.0f) setAndTell(o0 + kO + 1, 80.0f);
     }
     void pushDrawUndo(int side)
     {
@@ -817,7 +881,7 @@ private:
             if (samples_ - sh.lastDrawAt > (int64_t)(0.3 * sr_))
             {   // a new stroke
                 pushDrawUndo(side);
-                if (get(b + kShDrawMix) <= 0.0f) setAndTell(b + kShDrawMix, 100.0f);    // drawing takes over
+                makeDrawingAudible(side);                                // drawing takes over, and is heard
                 setPoint(side, k, v);
             }
             else
@@ -837,7 +901,7 @@ private:
             pushDrawUndo(side);
             const WaveTable& w = *sh.buf[sh.cur];
             for (int k = 0; k < kDrawPoints; ++k) setPoint(side, k, w.start[k]);
-            if (get(b + kShDrawMix) <= 0.0f) setAndTell(b + kShDrawMix, 100.0f);
+            makeDrawingAudible(side);
         }
         if (acted(b + kShClear)) { pushDrawUndo(side); for (int k = 0; k < kDrawPoints; ++k) setPoint(side, k, 0.0f); }
         if (acted(b + kShUndo) && sh.undoN > 0)
@@ -982,6 +1046,11 @@ private:
         t.v[kRouting] = (float)(cat >= 5 ? pick({0, 1}) : pick({0, 0, 0, 1}));
         // keep the result audible: two filters in series must overlap, band / high-pass not too low,
         // and a negative envelope may not close a filter below about 80 Hz
+        if (t.v[kRouting] > 0.5f && (int)t.v[kA + kFType] <= kLP12)
+        {   // series: the first filter, if a low-pass, stays open enough for the second to have something
+            t.v[kA + kCut] = std::fmax(t.v[kA + kCut], 400.0f);
+            t.v[kA + kFEnv] = std::fmax(t.v[kA + kFEnv], -std::log2(t.v[kA + kCut] / 200.0f) / 6.0f * 100.0f);
+        }
         if (t.v[kRouting] > 0.5f)
         {
             t.v[kB + kFType] = (float)pick({kLP12, kLP24});
@@ -991,7 +1060,9 @@ private:
         for (int b : {kA, kB})
         {
             const int ft = (int)t.v[b + kFType];
-            if (ft == kBP || ft == kHP) t.v[b + kCut] = std::fmax(t.v[b + kCut], ft == kHP ? 120.0f : 250.0f);
+            // a high-pass above about 1.2 kHz (or a band-pass far up) can remove a low note's whole sound
+            if (ft == kHP) t.v[b + kCut] = clamp(t.v[b + kCut], 120.0f, 1200.0f);
+            if (ft == kBP) t.v[b + kCut] = clamp(t.v[b + kCut], 250.0f, 4000.0f);
             if (t.v[b + kFEnv] < 0.0f)
             {   // cut * 2^(6 * amt) >= 80 Hz
                 const float minAmt = -std::log2(std::fmax(1.0f, t.v[b + kCut] / 80.0f)) / 6.0f * 100.0f;
@@ -1057,7 +1128,7 @@ private:
     }
     static int sectionOf(int p)
     {   // 0 = A osc, 1 = B osc, 2 = filters, 3 = envelopes, 4 = mod / character, 5 = always
-        if (p >= kShA) return (p - kShA) / kShN;                 // a shaper belongs to its side
+        if (p >= kShA && p < kShB + kShN) return (p - kShA) / kShN;   // a shaper belongs to its side
         if (p == kRouting || p == kPadDest) return 2;
         if (p >= kA && p < kB + kSideN)
         {
@@ -1240,6 +1311,7 @@ private:
     }
     void writerLoop()
     {
+        syncSkinList();                                          // the drop-down shows the saved names from the start
         while (!quit_.load())
         {
             const int prog = savePending_.load();
@@ -1253,12 +1325,56 @@ private:
                 userUsed_[c][u] = 1; userSkin_[c][u] = (uint8_t)saveSkin_;
                 std::snprintf(savedNameDisp_, sizeof savedNameDisp_, "%s", full);
                 writeUserFile();
+                syncSkinList();
                 savePending_.store(-1);
                 saveDone_.store(prog);
             }
             shapeWork();
             std::this_thread::sleep_for(std::chrono::milliseconds(8));
         }
+    }
+    // The MPC's drop-down list is fixed text in the skin (Plugin Skins/TUI.json). After a save (and at
+    // start-up) Elver rewrites that one list with the current names: factory presets, saved user presets,
+    // "TAG empty n" for empty slots. Worker thread only; only that list changes; written to a temporary
+    // file and renamed; left alone if the file is not as expected.
+    std::string listEntry(int prog) const
+    {
+        const int c = prog / kSlotsPer, s = prog % kSlotsPer;
+        if (s >= kFactoryPer && !userUsed_[c][s - kFactoryPer]) return std::string(kCatTags[c]) + " empty " + std::to_string(s - kFactoryPer + 1);
+        return programName(prog);
+    }
+    void syncSkinList()
+    {
+        if (skinFile_.empty()) return;
+        std::vector<uint8_t> raw;
+        if (!mpc::readFile(skinFile_, raw) || raw.empty()) return;
+        std::string j(raw.begin(), raw.end());
+        const std::string key = "\"Parameter " + std::to_string(kPresetPick) + "\"";
+        size_t k = j.find("\"replacementStrings\"");
+        if (k == std::string::npos) return;
+        k = j.find(key, k);
+        if (k == std::string::npos) return;
+        const size_t open = j.find('[', j.find("\"value\"", k));
+        if (open == std::string::npos) return;
+        const size_t close = j.find(']', open);
+        if (close == std::string::npos) return;
+        std::string list = "[";
+        for (int i = 0; i < kCats * kSlotsPer; ++i)
+        {
+            std::string n = listEntry(i), esc;
+            for (char ch : n) { if (ch == '"' || ch == '\\') esc += '\\'; if ((unsigned char)ch >= 32) esc += ch; }
+            list += (i ? ", \"" : "\"") + esc + "\"";
+        }
+        list += "]";
+        if (j.compare(open, close - open + 1, list) == 0) return;        // already right
+        j.replace(open, close - open + 1, list);
+        const std::string tmp = skinFile_ + ".tmp";
+        std::FILE* f = std::fopen(tmp.c_str(), "wb");
+        if (!f) return;
+        const bool ok = std::fwrite(j.data(), 1, j.size(), f) == j.size();
+        std::fclose(f);
+        if (!ok) { std::remove(tmp.c_str()); return; }
+        std::remove(skinFile_.c_str()); std::rename(tmp.c_str(), skinFile_.c_str());
     }
     void writeUserFile()
     {
@@ -1317,11 +1433,14 @@ private:
     float lfoRate_[2] = {}, lfoDepth_[2] = {}, lfoPh_[2] = {}, shL_[2] = {};
     int lfoShape_[2] = {}, lfoDest_[2] = {};
     mpc::dsp::Xorshift32 lfoRng_{0xA11CEu}, rng_;
+    float gAprev_ = 1.0f, gBprev_ = 0.0f;
     float gBlend_ = 0.0f, blendT_ = 0.0f, gVol_ = 0.3f, volT_ = 0.3f, crushL_ = 0.0f, crushR_ = 0.0f;
     int crushHold_ = 0;
+    float crushEnv_ = 0.0f, crushRel_ = 0.9999f;
     bool sustain_ = false, expectSound_ = false;
     int silentHeld_ = 0, watchdogResets_ = 0;
     float cpu_ = 0.0f, lastCpu_ = -1.0f;
+    int pickLast_ = 0, progLast_ = 0;
     int pubCount_ = 0, serialV_ = 0, serialS_ = 0, serialN_ = 0, lastBrowseCat_ = -1;
     std::atomic<float> cpuDisp_{0.0f};
     std::atomic<int> voicesDisp_{-1}, limitDisp_{-1}, statusDisp_{kStReady}, countDisp_{0}, catDisp_{0}, loadedDisp_{0};
@@ -1347,7 +1466,7 @@ private:
     float saveVals_[kNumParams] = {};
     int saveSkin_ = 0;
     char saveName_[kNameLen + 1] = {};
-    std::string userFile_;
+    std::string userFile_, skinFile_;
     std::atomic<int> savePending_{-1}, saveDone_{-1};
     std::atomic<bool> quit_{false};
     // shapes

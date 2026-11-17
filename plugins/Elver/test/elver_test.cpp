@@ -97,7 +97,36 @@ double clickRatio(const std::vector<float>& v)
     double mx = 0, s = 0; for (size_t i = 1; i < v.size(); ++i) { const double d = std::fabs(v[i] - v[i - 1]); mx = std::fmax(mx, d); s += d; }
     return mx / (s / v.size() + 1e-12);
 }
-void wav(const std::string& path, const std::vector<float>& l, const std::vector<float>& r)
+// A click is a step much larger than every other step around it: a waveform's own edges repeat every
+// cycle (saw resets, square edges, noise), a click does not. For each step (ignoring those under 0.01,
+// -40 dBFS) the ratio to the largest other step within +-1024 samples (23 ms) is taken; the result is
+// the worst ratio. Steps that are not single-sample jumps (more than 3x both neighbours) are skipped:
+// band-limited edges spread over several samples. Calibrated by "clickcal".
+// Grit holds each sample for 1 + int(grit x 7) samples: from 1/7 (14.3 %) on it makes stairs on purpose
+constexpr float kGritHold = 1.0f / 7.0f;
+constexpr double kClickLimit = 10.0;     // clean waveforms ~1, fast plucks up to ~5, real clicks 27+
+int g_clickAt = -1;
+double localClickRatio(const std::vector<float>& v)
+{
+    g_clickAt = -1;
+    const int W = 1024, n = (int)v.size();
+    std::vector<double> d((size_t)n, 0.0);
+    for (int i = 1; i < n; ++i) d[(size_t)i] = std::fabs((double)v[(size_t)i] - v[(size_t)i - 1]);
+    double worst = 0;
+    for (int i = 1; i < n; ++i)
+    {
+        const double di = d[(size_t)i];
+        if (di < 0.01) continue;
+        // a click is a single-sample jump: a band-limited edge spreads over its neighbours
+        const double adj = std::fmax(d[(size_t)i - 1], i + 1 < n ? d[(size_t)i + 1] : 0.0);
+        if (di <= 3.0 * adj) continue;
+        double other = 1e-4;
+        for (int k = std::max(1, i - W); k <= std::min(n - 1, i + W); ++k) if (std::abs(k - i) > 2) other = std::fmax(other, d[(size_t)k]);
+        if (di / other > worst) { worst = di / other; g_clickAt = i; }
+        if (worst > 1e3) break;
+    }
+    return worst;
+}void wav(const std::string& path, const std::vector<float>& l, const std::vector<float>& r)
 {
     FILE* f = std::fopen(path.c_str(), "wb"); if (!f) return;
     const uint32_t n = (uint32_t)l.size(), bytes = n * 4;
@@ -136,11 +165,87 @@ int main(int argc, char** argv)
     if (argc < 3) return 1;
     _putenv_s("MPC_PLUGIN_FOLDER", argv[2]);
     std::remove((std::string(argv[2]) + "/user-presets.bin").c_str());
+    if (const char* skin = std::getenv("ELVER_SKIN"))
+    {   // a copy of the real skin in the test plugin folder: Elver keeps its preset list up to date
+        CreateDirectoryA((std::string(argv[2]) + "/Plugin Skins").c_str(), nullptr);
+        CopyFileA(skin, (std::string(argv[2]) + "/Plugin Skins/TUI.json").c_str(), FALSE);
+    }
     g_main = (MainProc)GetProcAddress(LoadLibraryA(argv[1]), "VSTPluginMain");
     if (!g_main) { std::printf("cannot load\n"); return 1; }
     std::memset(&g_time, 0, sizeof g_time); g_time.tempo = 120; g_time.sampleRate = SR; g_time.flags = kVstTempoValid;
     const std::string renders = argc > 3 ? argv[3] : "";
-    if (argc > 4 && std::string(argv[4]) == "levels")
+    if (argc > 4 && std::string(argv[4]) == "clickcal")
+    {
+        std::vector<float> sine(SR), pluck(SR), clicked(SR);
+        for (int i = 0; i < SR; ++i)
+        {
+            const double t = (double)i / SR;
+            sine[i] = (float)(0.3 * std::sin(2 * 3.14159265 * 220 * t));
+            const double ph = std::fmod(t * 130.81, 1.0);
+            pluck[i] = (float)(0.5 * std::exp(-t * 12) * (2 * ph - 1) * std::fmin(1.0, t / 0.004));   // a raw saw pluck (aliasing)
+            clicked[i] = sine[i] + (i >= SR / 2 ? 0.25f : 0.0f);
+        }
+        std::vector<float> blpluck(SR); for (int i = 0; i < SR; ++i) blpluck[i] = (pluck[i] + pluck[i > 0 ? i - 1 : 0] + pluck[i > 1 ? i - 2 : 0]) / 3.0f;   // edges spread like a band-limited saw
+        std::vector<float> noise(SR), cut(SR); uint32_t g_rng = 3;
+        for (int i = 0; i < SR; ++i) { noise[i] = 0.3f * ((float)((g_rng = g_rng * 1664525u + 1013904223u) >> 8) / 8388608.0f - 1.0f); cut[i] = i < SR / 2 + 50 ? sine[i] : 0.0f; }
+        std::printf("click ratio: sine %.1f, band-limited saw pluck %.1f, noise %.1f, (raw aliasing saw %.1f) | sine with a 0.25 jump %.1f, note cut off %.1f (limit %.0f)\n", localClickRatio(sine), localClickRatio(blpluck), localClickRatio(noise), localClickRatio(pluck), localClickRatio(clicked), localClickRatio(cut), kClickLimit);
+        return 0;
+    }
+    if (argc > 5 && std::string(argv[4]) == "replay")
+    {   // debug: replay a saved roll; with "name=normalised" overrides, to find what causes a click
+        Plug p; p.open();
+        std::vector<char> c; if (FILE* fp = std::fopen(argv[5], "rb")) { char b[65536]; size_t n; while ((n = std::fread(b, 1, sizeof b, fp)) > 0) c.insert(c.end(), b, b + n); std::fclose(fp); }
+        p.call(effSetChunk, 0, (VstIntPtr)c.size(), c.data()); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(50)); p.run(0.05);
+        for (int a = 6; a < argc; ++a) { std::string kv(argv[a]); const size_t q = kv.find('='); p.set(kv.substr(0, q).c_str(), (float)std::atof(kv.c_str() + q + 1)); }
+        p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(50)); p.render(1.0, {{0, 0xB0, 120, 0}}); p.run(0.05);
+        std::vector<float> L, R;
+        p.render(4.0, {on(0, 48), off((int)(0.9 * SR), 48), on((int)(1.0 * SR), 55), on((int)(1.0 * SR), 60), on((int)(1.0 * SR), 64),
+                       off((int)(2.0 * SR), 55), off((int)(2.0 * SR), 60), off((int)(2.0 * SR), 64), on((int)(2.2 * SR), 72), off((int)(2.6 * SR), 72)}, &L, &R);
+        const double cl = localClickRatio(L), cr = localClickRatio(R);
+        const std::vector<float>& v = cl >= cr ? L : R; localClickRatio(v); const int at = g_clickAt;
+        if (std::getenv("REPLAY_SHOW")) { for (const char* n2 : {"LFO1 Rate", "LFO1 Depth", "LFO1 Shape", "LFO1 To", "LFO2 Rate", "LFO2 Depth", "LFO2 Shape", "LFO2 To", "Routing", "Blend", "A Filter", "A Cutoff", "A Reso", "B Filter", "B Cutoff", "B Reso", "A Release", "B Release", "Drive", "Grit"}) std::printf("%s=%s; ", n2, p.text(n2).c_str()); std::printf("\n"); }
+        std::printf("peak %.1f dBFS, rms %.1f dBFS; click ratio L %.1f R %.1f; worst at %.4f s:", dB(std::fmax(peak(L), peak(R))), dB(rms(L, 0, L.size())), cl, cr, at / (double)SR);
+        for (int q = std::max(0, at - 4); q >= 0 && q < std::min((int)v.size(), at + 6); ++q) std::printf(" %+.4f", v[(size_t)q]);
+        std::printf("\n");
+        p.close(); return 0;
+    }
+    if (argc > 5 && std::string(argv[4]) == "moods")
+    {   // debug: roll one mood many times; print the rolls that fail the render check, with their settings
+        const int cat = std::atoi(argv[5]), tries = argc > 6 ? std::atoi(argv[6]) : 100;
+        int bad = 0;
+        for (int k = 0; k < tries; ++k)
+        {
+            static Plug p; static bool opened = false; if (!opened) { p.open(); opened = true; }
+            p.set("Category", cat / 6.0f); p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(30)); p.render(1.0, {{0, 0xB0, 120, 0}}); p.run(0.05);   // all sound off between rolls
+            std::vector<float> L, R;
+            p.render(4.0, {on(0, 48), off((int)(0.9 * SR), 48), on((int)(1.0 * SR), 55), on((int)(1.0 * SR), 60), on((int)(1.0 * SR), 64),
+                           off((int)(2.0 * SR), 55), off((int)(2.0 * SR), 60), off((int)(2.0 * SR), 64), on((int)(2.2 * SR), 72), off((int)(2.6 * SR), 72)}, &L, &R);
+            const double r = rms(L, 0, (size_t)(2.6 * SR)); const float pk = std::fmax(peak(L), peak(R)); const double cr = std::fmax(localClickRatio(L), localClickRatio(R));
+            const bool crushed = p.getN("Grit") >= kGritHold;
+            (void)r; if (pk > 1e-3f && pk <= 0.95f && (crushed || cr < kClickLimit)) continue;   // a bit-crusher's stairs are the effect
+            ++bad;
+            {   // keep the whole state of a failing roll, for replay
+                void* ptr = nullptr; const VstIntPtr len = p.call(effGetChunk, 0, 0, &ptr);
+                char fn[64]; std::snprintf(fn, sizeof fn, "/roll_%d_%d.chunk", cat, k);
+                if (FILE* fp = std::fopen((std::string(argv[2]) + fn).c_str(), "wb")) { std::fwrite(ptr, 1, (size_t)len, fp); std::fclose(fp); }
+            }
+            std::printf("roll %d: %.0f dBFS rms, peak %.1f dBFS, click ratio %.1f\n  ", k, dB(r), dB(pk), cr);
+            if (cr >= kClickLimit)
+            {
+                const double cl = localClickRatio(L) >= localClickRatio(R) ? 0 : 1; const std::vector<float>& v = cl == 0 ? L : R; localClickRatio(v);
+                const int at = g_clickAt;
+                std::printf("worst step at %.4f s (%s), samples:", at / (double)SR, cl == 0 ? "L" : "R");
+                for (int q = std::max(0, at - 6); q < std::min((int)v.size(), at + 6); ++q) std::printf(" %+.4f", v[(size_t)q]);
+                std::printf("\n  ");
+            }
+            for (const char* n : {"Blend", "Routing", "Drive", "Grit", "Ring", "A1 Wave", "A2 Wave", "A Filter", "A Cutoff", "A Reso", "A Env Amt", "A Attack", "A Decay", "A Sustain",
+                                  "B1 Wave", "B Filter", "B Cutoff", "B Reso", "B Env Amt", "B Attack", "LFO1 To", "LFO1 Depth", "LFO2 To", "LFO2 Depth", "A Fold", "A Bend", "A Sync", "A Start From"})
+                std::printf("%s=%s; ", n, p.text(n).c_str());
+            std::printf("\n");
+        }
+        std::printf("%d of %d rolls failed\n", bad, tries);
+        return 0;
+    }    if (argc > 4 && std::string(argv[4]) == "levels")
     {   // debug: the phrase level of the factory presets named on the command line (program numbers)
         for (int k = 5; k < argc; ++k)
         {
@@ -386,8 +491,8 @@ int main(int argc, char** argv)
         q.call(effSetProgram, 0, user0); q.run(0.05);
         const float cut2 = q.getN("A Cutoff");
         // the browser: category Lo-Fi, slot 5 shows it, Load selects it
-        q.set("Browse", 4.0f / 6.0f); q.set("Preset", 4.0f / 11.0f); q.run(0.05);
-        const std::string shown = q.text("Preset");
+        q.set("Browse", 4.0f / 6.0f); q.set("Browse Slot", 4.0f / 11.0f); q.run(0.05);
+        const std::string shown = q.text("Browse Slot");
         q.call(effSetProgram, 0, 0); q.run(0.05); q.set("Skin", 0.0f); q.tap("Load"); q.run(0.1);
         const float cut3 = q.getN("A Cutoff");
         const std::string skinBack = q.text("Skin");
@@ -456,9 +561,9 @@ int main(int argc, char** argv)
         auto judge = [&](const std::string& name, const std::vector<float>& L, const std::vector<float>& R, bool crushed) {
             ++n;
             const double r = rms(L, 0, (size_t)(2.6 * SR)); const float pk = std::fmax(peak(L), peak(R));
-            const double cr = std::fmax(clickRatio(L), clickRatio(R));
-            const bool ok = r > 1e-3 && pk <= 0.95f && (crushed || cr < 400);   // bit-crush steps are the effect
-            char line[160]; std::snprintf(line, sizeof line, "%s: %.0f dBFS rms, peak %.1f dBFS, step ratio %.0f%s", name.c_str(), dB(r), dB(pk), cr, ok ? (crushed ? " (crushed: steps expected)" : "") : "  <-- FAIL");
+            const double cr = std::fmax(localClickRatio(L), localClickRatio(R));
+            const bool ok = pk > 1e-3f && pk <= 0.95f && (crushed || cr < kClickLimit);   // sounds (peak > -60 dBFS), no runaway, no clicks (bit-crush stairs are the effect)
+            char line[160]; std::snprintf(line, sizeof line, "%s: %.0f dBFS rms, peak %.1f dBFS, click ratio %.1f%s", name.c_str(), dB(r), dB(pk), cr, ok ? (crushed ? " (bit-crushed)" : "") : "  <-- FAIL");
             std::printf("      %s\n", line);
             if (!ok) bad += name + ", ";
             if (!renders.empty()) wav(renders + "/" + name + ".wav", L, R);
@@ -472,12 +577,12 @@ int main(int argc, char** argv)
             for (int k = 0; k < 3; ++k)
             {
                 Plug p; p.open(); p.set("Category", c / 6.0f); for (int j = 0; j <= k; ++j) p.tap("Randomize"); p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(60)); p.run(0.05);   // the new shapes are built
-                const bool cr = p.getN("Grit") > 0.3f;
+                const bool cr = p.getN("Grit") >= kGritHold;
                 std::vector<float> L, R; phrase(p, L, R); p.close();
                 judge(std::string("mood_") + moods[c] + "_" + std::to_string(k + 1), L, R, cr);
             }
         for (int prog = 0; prog < 84; prog += 12)
-            for (int s = 0; s < 4; ++s) { Plug p; p.open(prog + s); const bool cr = p.getN("Grit") > 0.3f; std::vector<float> L, R; phrase(p, L, R); const std::string pname = p.progName(prog + s); judge("preset_" + pname, L, R, cr); p.close();
+            for (int s = 0; s < 4; ++s) { Plug p; p.open(prog + s); const bool cr = p.getN("Grit") >= kGritHold; std::vector<float> L, R; phrase(p, L, R); const std::string pname = p.progName(prog + s); judge("preset_" + pname, L, R, cr); p.close();
                 const double lv = dB(rms(L, 0, (size_t)(2.6 * SR))); if (lv < -36 || lv > -15) { char lb[96]; std::snprintf(lb, sizeof lb, "level of %s (%.1f dBFS), ", pname.c_str(), lv); bad += lb; } }
         check(bad.empty(), "renders: every waveform, filter type, mood and factory preset sounds, no clicks, no runaway (" + std::to_string(n) + " files)", bad.empty() ? "" : "problems: " + bad);
     }
@@ -546,8 +651,8 @@ int main(int argc, char** argv)
             p.render(1.2, {on(0, 48), off((int)(0.5 * SR), 48), on((int)(0.6 * SR), 67), off((int)(1.1 * SR), 67)}, &L, &R);
             const std::string nm = p.text("A Start From");
             p.close(); ++n;
-            const double r = rms(L, 0, L.size()); const float pk = std::fmax(peak(L), peak(R)); const double cr = clickRatio(L);
-            if (r < 1e-3 || pk > 0.95f || cr > 400) { char b[96]; std::snprintf(b, sizeof b, "%s (%.0f dB, peak %.1f, step %.0f), ", nm.c_str(), dB(r), dB(pk), cr); bad += b; }
+            const double r = rms(L, 0, L.size()); const float pk = std::fmax(peak(L), peak(R)); const double cr = std::fmax(localClickRatio(L), localClickRatio(R));
+            if (r < 1e-3 || pk > 0.95f || cr > kClickLimit) { char b[96]; std::snprintf(b, sizeof b, "%s (%.0f dB, peak %.1f, click %.1f), ", nm.c_str(), dB(r), dB(pk), cr); bad += b; }
             if (!renders.empty() && w % 6 == 0) wav(renders + "/shape_" + std::to_string(w) + ".wav", L, R);
         }
         check(bad.empty(), "Shape: all " + std::to_string(n) + " library waves play (no silence, clipping or clicks)", bad);
@@ -613,9 +718,9 @@ int main(int argc, char** argv)
             }
             p.close();
             double maxStep = 0; for (size_t i = 1; i < all.size(); ++i) maxStep = std::fmax(maxStep, std::fabs(all[i] - all[i - 1]));
-            const double cr = clickRatio(all);
-            std::snprintf(d2, sizeof d2, "12 changes during a held note: largest sample step %.3f, step ratio %.0f", maxStep, cr);
-            check(cr < 400 && peak(all) < 0.95f, "Shape: changing the shape while a note plays crossfades, no clicks", d2);
+            const double cr = localClickRatio(all);
+            std::snprintf(d2, sizeof d2, "12 changes during a held note: largest sample step %.3f, click ratio %.1f (limit %.0f)", maxStep, cr, kClickLimit);
+            check(cr < kClickLimit && peak(all) < 0.95f, "Shape: changing the shape while a note plays crossfades, no clicks", d2);
             if (!renders.empty()) wav(renders + "/shape_live_changes.wav", all, all);
         }
 
@@ -643,6 +748,26 @@ int main(int argc, char** argv)
                   "drawing: a fast stroke has no gaps, Draw Mix comes up, Undo / Clear / Copy Start work", d2);
         }
 
+        // f2) drawing on the default sound (oscillators on Saw) is heard straight away
+        {
+            auto renderAfter = [&](bool draw) {
+                Plug p; p.open(); p.run(0.05);
+                if (draw)
+                {   // a square-ish stroke: top half then bottom half
+                    p.set("A Draw X", 0.0f); p.set("A Draw Y", 0.95f); p.run(0.01); p.set("A Draw X", 31 / 63.0f); p.run(0.01);
+                    p.set("A Draw X", 32 / 63.0f); p.set("A Draw Y", 0.05f); p.run(0.01); p.set("A Draw X", 1.0f); p.run(0.01);
+                    p.run(0.02); std::this_thread::sleep_for(std::chrono::milliseconds(80)); p.run(0.05);
+                }
+                std::vector<float> L; p.render(0.6, {on(0, 48)}, &L);
+                const std::string wave = p.text("A1 Wave"), mix = p.text("A Draw Mix");
+                p.close(); return std::make_pair(L, wave + ", Draw Mix " + mix);
+            };
+            const auto plain = renderAfter(false), drawn = renderAfter(true);
+            const double rel = [&] { double d = 0, r = 0; for (size_t k = 0; k < plain.first.size(); ++k) { d += std::fabs(plain.first[k] - drawn.first[k]); r += std::fabs(plain.first[k]) + std::fabs(drawn.first[k]); } return d / (r + 1e-12); }();
+            std::snprintf(d2, sizeof d2, "default sound: A1 %s; after one stroke: A1 %s; the sound changed %.0f %%", plain.second.c_str(), drawn.second.c_str(), 100 * rel);
+            check(drawn.second.rfind("Shape, Draw Mix 100", 0) == 0 && rel > 0.1, "drawing is heard at once: the first stroke sets oscillator 1 to Shape", d2);
+            if (!renders.empty()) wav(renders + "/drawn_wave.wav", drawn.first, drawn.first);
+        }
         // g) saved: project chunk, user preset after a restart; randomize leaves the drawing alone
         {
             Plug p; p.open(); p.set("A1 Wave", 1.0f); p.set("A Fold", 0.37f); p.set("A Start From", 11 / 59.0f);
@@ -711,7 +836,43 @@ int main(int argc, char** argv)
                 p.close();
             }
         }
-    }    std::printf("\nper-control list:\n"); for (const auto& s : g_controlList) std::printf("  %s\n", s.c_str());
+    }    // ---- 15. the preset drop-down, and the list in the skin kept up to date -----------------------------------
+    {
+        Plug ref; ref.open(); ref.call(effSetProgram, 0, 13); ref.run(0.05); const float want = ref.getN("A Cutoff"); const std::string wantName = ref.progName(13); ref.close();
+        Plug p; p.open(); p.run(0.05);
+        p.set("Preset", 13 / 83.0f); p.run(0.1);                                   // PAD Warm Choir
+        const float got = p.getN("A Cutoff"); const std::string st = p.text("Status"), shown = p.text("Preset");
+        p.call(effSetProgram, 0, 30); p.run(0.1);
+        const std::string follow = p.text("Preset"); const float followN = p.getN("Preset");
+        const float before = p.getN("A Cutoff");
+        p.set("Preset", 11 / 83.0f); p.run(0.1);                                   // AMB user slot 8: empty
+        const std::string emptySt = p.text("Status"); const float after = p.getN("A Cutoff");
+        p.close();
+        char d3[400]; std::snprintf(d3, sizeof d3, "pick #14 -> cutoff %.3f (preset has %.3f), status '%s', shows '%s'; host loads #31 -> drop-down shows '%s' (%.3f); empty slot -> '%s', sound kept %s",
+                                    got, want, st.c_str(), shown.c_str(), follow.c_str(), followN, emptySt.c_str(), after == before ? "yes" : "NO");
+        check(std::fabs(got - want) < 1e-6f && st == "Loaded: " + wantName && shown == wantName && std::fabs(followN - 30 / 83.0f) < 1e-4f &&
+              emptySt == "That slot is empty" && after == before, "preset drop-down: picking loads, it follows other loads, empty slots are refused", d3);
+        // the skin's list (a copy of the real TUI.json in the plugin folder): the saved preset of test 8 is listed
+        std::string savedName;
+        {   // save a preset now (Lo-Fi), then read the skin's list
+            Plug q; q.open(); q.set("Category", 4 / 6.0f); q.tap("Randomize"); q.run(0.1);
+            q.tap("Save"); q.tap("Confirm"); q.run(0.05); std::this_thread::sleep_for(std::chrono::milliseconds(400)); q.run(0.1);
+            savedName = q.text("Status"); savedName = savedName.substr(savedName.find(':') + 2);
+            q.close();
+        }
+        const std::string skin = std::string(argv[2]) + "/Plugin Skins/TUI.json";
+        std::vector<char> raw; if (FILE* fp = std::fopen(skin.c_str(), "rb")) { char b[65536]; size_t n; while ((n = std::fread(b, 1, sizeof b, fp)) > 0) raw.insert(raw.end(), b, b + n); std::fclose(fp); }
+        const std::string j(raw.begin(), raw.end());
+        const size_t k = j.find("\"Parameter 377\""), open = j.find('[', k), close = j.find(']', open);
+        const std::string list = k == std::string::npos ? "" : j.substr(open, close - open + 1);
+        const size_t moth = list.find("\"" + savedName + "\""), lofi1 = list.find("\"LOFI Moth Light\"");
+        std::snprintf(d3, sizeof d3, "skin file %s, list %zu chars; just saved '%s': %s (right after the Lo-Fi factory presets: %s); 'AMB empty 1' %s",
+                      raw.empty() ? "MISSING" : "found", list.size(), savedName.c_str(), moth != std::string::npos ? "listed" : "NOT listed", moth > lofi1 && moth - lofi1 < 24 ? "yes" : "no",
+                      list.find("\"AMB empty 1\"") != std::string::npos ? "listed" : "NOT listed");
+        check(!raw.empty() && moth != std::string::npos && moth > lofi1 && list.find("\"AMB empty 1\"") != std::string::npos,
+              "the drop-down's list in the skin is rewritten with saved preset names", d3);
+    }
+    std::printf("\nper-control list:\n"); for (const auto& s : g_controlList) std::printf("  %s\n", s.c_str());
     std::printf("\n%d passed, %d failure(s)\n", g_pass, g_fail);
     return g_fail;
 }

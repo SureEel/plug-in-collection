@@ -625,11 +625,12 @@
       "name": "PRESET",
       "controls": [
         {
-          "param": "Browse",
-          "widget": "knob"
+          "param": "Preset",
+          "widget": "slider",
+          "overlay": "menu"
         },
         {
-          "param": "Preset",
+          "param": "Category",
           "widget": "knob"
         },
         {
@@ -660,11 +661,11 @@
           "param": "Lock Filter",
           "widget": "switch"
         },
+        "empty",
         {
-          "param": "Load",
+          "param": "Randomize",
           "widget": "switch"
         },
-        "empty",
         {
           "param": "Lock Skin",
           "widget": "switch"

@@ -265,8 +265,8 @@
                 "SubTab": 1,
                 "Bank Direction": "Column",
                 "Q-Links": {
-                    "Q-Link 1": 100,
-                    "Q-Link 2": -1,
+                    "Q-Link 1": -1,
+                    "Q-Link 2": 89,
                     "Q-Link 3": 97,
                     "Q-Link 4": 95,
                     "Q-Link 5": -1,
@@ -277,8 +277,8 @@
                     "Q-Link 10": -1,
                     "Q-Link 11": 90,
                     "Q-Link 12": 93,
-                    "Q-Link 13": 98,
-                    "Q-Link 14": 99,
+                    "Q-Link 13": 377,
+                    "Q-Link 14": 88,
                     "Q-Link 15": 91,
                     "Q-Link 16": 92
                 }
