@@ -1,0 +1,17 @@
+{
+  "name": "Kashyyyk Fuzz",
+  "manufacturer": "sureeel",
+  "version": "0.3.0",
+  "format": "vst2",
+  "kind": "effect",
+  "uid": "S5Kw",
+  "numInputs": 2,
+  "numOutputs": 2,
+  "category": "Effect",
+  "file32": "VST/kashyyyk-fuzz-arm32.so",
+  "file64": "VST/kashyyyk-fuzz-arm64.so",
+  "description": "Modular fuzz pedal: six circuit families of 1-3 stages, swappable modeled parts, Sag, Feedback, 29 factory presets, Random, Undo and named user presets.",
+  "author": "Sure Eel",
+  "url": "https://github.com/SureEel/plug-in-collection",
+  "license": "MIT"
+}

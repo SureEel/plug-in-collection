@@ -1,0 +1,59 @@
+{
+  "kit": "mpc-red",
+  "pages": [
+    {
+      "name": "PEDAL",
+      "controls": [
+        { "param": "Fuzz", "widget": "knob" },
+        { "param": "Tone", "widget": "knob" },
+        { "param": "Level", "widget": "knob" },
+        { "param": "Blend", "widget": "knob" },
+
+        { "param": "Sag", "widget": "knob" },
+        { "param": "Stages", "widget": "slider" },
+        { "param": "Topology", "widget": "slider" },
+        { "param": "Feedback", "widget": "knob" },
+
+        { "param": "Transistors", "widget": "slider" },
+        { "param": "Diodes", "widget": "slider" },
+        { "param": "Diode Arr", "widget": "slider" },
+        { "param": "Input Cap", "widget": "slider" },
+
+        { "param": "Guitar Vol", "widget": "knob" },
+        { "param": "Vol Follow", "widget": "switch" },
+        { "param": "Input", "widget": "knob" },
+        { "param": "Output", "widget": "knob" }
+      ]
+    },
+    {
+      "name": "PARTS",
+      "controls": [
+        { "param": "Transistors", "widget": "slider" },
+        { "param": "Diodes", "widget": "slider" },
+        { "param": "Diode Arr", "widget": "slider" },
+        { "param": "Input Cap", "widget": "slider" },
+        { "param": "Tone Stack", "widget": "slider" }
+      ]
+    },
+    {
+      "name": "CIRCUIT",
+      "controls": [
+        { "param": "Topology", "widget": "slider" },
+        { "param": "Stages", "widget": "slider" },
+        { "param": "Dual Mix", "widget": "knob" },
+        { "param": "Q2", "widget": "slider" },
+        { "param": "Coupling", "widget": "slider" },
+        { "param": "Resistors", "widget": "switch" },
+        { "param": "Buffer", "widget": "switch" }
+      ]
+    },
+    {
+      "name": "SAVE",
+      "controls": [
+        { "param": "Name Pos", "widget": "knob" },
+        { "param": "Letter", "widget": "knob" }
+      ]
+    }
+  ],
+  "style": { "background": "ff1e1d1e", "text": "ffffffff", "muted": "ff6a6a6c" }
+}
